@@ -1,6 +1,58 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import youtube_dl
+import hunter
+from youtube_dl.hunterconfig import QueryDict
+from pathlib import Path
+from pdb import set_trace as st
+import os
+import sys
+
+print(sys.path)
+print(os.environ['PATH'])
+print(youtube_dl)
+print(hunter)
+
+query = QueryDict['test3']
+actions = [action for action in query.actions]
+outputs = [action.stream for action in actions]
+logfile = Path('/Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/bin')
+assert logfile.exists()
+outfiles = [logfile.joinpath(filename) for filename in ('call.top.log', 'code.top.log', 'snoop.top.log')]
+
+
+def outs():
+  for outfile, output in zip(outfiles, outputs):
+    # print(1, outfile, output)
+    with open(outfile, 'a') as f:
+      f.write(output.getvalue())
+
+
+outs()
+# hunter.trace(hunterconfig)
+# x = 3
+# x += 1
+# youtube_dl.main([__file__, url])
+# rv = out.getvalue()
+# print(rv)
 
 if __name__ == '__main__':
+  print(939709270304023423)
+  hunter.trace(query)
+  try:
+    hunter.trace(query)
     youtube_dl.main()
+    print(111111717177177171717)
+    outs()
+    print(44444444448948948948948948948)
+    if rv == '':
+      print(3233323323232332)
+      outs()
+      assert False
+  except:
+    print(382)
+    outs()
+    # st()
+  finally:
+    outs()
+    print(9987)
