@@ -1,8 +1,22 @@
-import hunter
+import hunter,re
 from hunter import Q
 from hunter.actions import CallPrinter, CodePrinter, VarsPrinter, VarsSnooper
 import io
 
+def process_match(pth1,pth2,pth3):
+    """
+    pth1: "youtube_dl"
+    pth2: [None, f"{string}/", f"{string}/{string}/"]
+    pth3: filename
+    """
+    new1 = "yt_dl"
+    if not pth2:
+        new2 = ""
+    else:
+        tmp = pth2.split("/")
+        assert len(tmp) == 2 or len(tmp) == 3
+        new2 = tmp[0][0] if len(tmp) == 2 else f"{tmp[0][0]}/{tmp[1][0]}"
+    return f"{new1}/{new2}/{pth3}"
 
 def patch_filename_prefix(self, event=None):
   """
@@ -10,8 +24,19 @@ def patch_filename_prefix(self, event=None):
 
   Returns: string
   """
+  rgx = re.compile(r"/(?P<pth1>youtube_dl)/(?P<pth2>.+[/])*(?P<pth3>.*py)")
+  test = [
+      "/youtube_dl/YoutubeDL.py",
+      "/youtube_dl/extractor/common.py",
+      "/youtube_dl/somedir/someother/filename.py",
+      "/youtube-dl/youtube_dl/filename.py"
+  ]
   if event:
     filename = event.filename or '<???>'
+    match = rgx.search(filename)
+    pth1,pth2,pth3=match.groupdict().values()
+    filename = process_match(match.groupdict().values())
+    self.filename_alignment = 25
     if len(filename) > self.filename_alignment:
       filename = '[...]{}'.format(filename[5 - self.filename_alignment:])
     return '{:>{}}{COLON}:{LINENO}{:<5} '.format(
