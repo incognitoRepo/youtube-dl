@@ -13,12 +13,12 @@ print(os.environ['PATH'])
 print(youtube_dl)
 print(hunter)
 
-query = QueryDict['test3']
+query = QueryDict['test4']
 actions = [action for action in query.actions]
 outputs = [action.stream for action in actions]
 logfile = Path('/Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/bin')
 assert logfile.exists()
-outfiles = [logfile.joinpath(filename) for filename in ('call.top.log', 'code.top.log', 'snoop.top.log')]
+outfiles = [logfile.joinpath(filename) for filename in ('cap.top.log', 'cop.top.log', 'snp.top.log')]
 
 
 def outs():

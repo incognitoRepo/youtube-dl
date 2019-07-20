@@ -95,6 +95,11 @@ class CallLine:
 
 
 def handle_codefile():
+  RGX  = re.compile(
+    r"(?P<home>yt_dl)/(?P<interpaths>.+[/])*(?P<filename>.*py)"
+    r":(?P<lineno>\d{1,5})\s+(?P<event_kind>[a-z]+)\s+"
+    r"(?P<data>[^\s].+)$"
+  )
   RGX1 = re.compile(
         r"(?P<pth1>.*be_dl)/(?P<pth2>.*)?/?(?P<pth3>.*py):(?P<lineno>\d{1,5})"
         r"\s+(?P<evt>[a-z]+)(?P<preserved_ws>\s+)(?P<data>[^\s].+)"
