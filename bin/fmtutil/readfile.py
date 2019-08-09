@@ -1,24 +1,33 @@
 import re,sys,os
-import cgitb;cgitb.enable(format='text')
-from re_devkit import reDevKit
+from fsplit.filesplit import FileSplit
+from math import floor
+import pandas as pd
+from .re_devkit import reDevKit
 from pdb import set_trace as st
+from types import SimpleNamespace
 from dataclasses import dataclass,field
 from typing import Dict, List, Any, Iterable
-from exception import MyException
-filename_prefixes, base = ["cap", "cop", "snp"], "top.log"
-filenames = [f"{prefix}.{base}" for prefix in filename_prefixes]
+from .exception import MyException
+from .constants import FILENAMES
+from toolz.functoolz import compose_left
+from collections import OrderedDict
 rgxs = [
-  re.compile(
-      r"(?P<home>yt_dl)/(?P<interpaths>.+[/]){0,2}(?P<filename>.*py)"
-      r":(?P<line_number>\d{1,5})\s+(?P<event_kind>[a-z]+)\s+"
-      r"(?P<source_data>[^\s].+)$"
+  re.compile( # regular line
+      r"(?P<home>yt_dl)/(?P<interpaths>(?:(?!\s{2}).)+[/]){0,2}(?P<filename>.*?py)"
+      r":(?P<line_number>\d{1,5})\s+(?P<event_kind>[a-z][a-z\s]{8})\s" #{event:9} {COLOR}{data}
+      r"(?P<source_data>[\s]*.+)$"
   ),
-  re.compile(
-      r"\s+"
-      r"(?P<symbol>[|]|[*]|[.]{3})\s+"
-      r"(?P<source_data>[^\s].+)$"
+  re.compile( # line continuation line
+      r"^\s+"
+      r"(?P<symbol>"
+      r"(?:\s{3}[|\s]{6})"
+      r"|(?:[\s]{3}[*\s]{6})"
+      r"|(?:[.]{2}[.\s]{6})"
+      r")\s"
+      r"(?P<source_data>[\s]*.+)$"
   )
 ]
+
 def debug_regex(rgxlist,line,excinfo):
   for rgx in rgxlist:
     redk = reDevKit()
@@ -26,73 +35,72 @@ def debug_regex(rgxlist,line,excinfo):
       .create()
       .openbrowser())
 
-def iterable_from_file(filename: str):
-  with open(filename) as f:
-    filelines = f.readlines()
-  iterablines = iter(filelines)
-  return iterablines
-
-def code_dfdict(**kwds) -> Dict:
-  if 'symbol' in kwds:
-    kwds['line_continuation'] = (kwds['symbol'],kwds['source_data'])
-    del kwds['source_data']
-  rv = codeline_dictfact()
-  rv.update(kwds)
-  return rv
-
-def codeline_dictfact():
+def dct4df(**kwds) -> Dict:
+  got = lambda key: kwds.get(key,None)
   d = {
-    "filename": None,
-    "line_number": None,
-    "line_continuation": None, #tuple(symbol,source_data)
-    "indent_level": None,
-    "event_kind": None,
-    "source_data": None
+    "home": got('home'),
+    "interpaths": got('interpaths'),
+    "filename": got('filename'),
+    "line_number": got('line_number'),
+    "event_kind": got('event_kind'),
+    "symbol": [ got('symbol') ],
+    'source_data': [ got('source_data') ]
   }
   return d
 
+def _get_df_from_tracefile():
+  def entry(filename):
+    df = compose_left(
+      read_hunter_trace_file,
+      process_lines_for_df,
+      get_df
+    )(filename)
+    return df
 
-@dataclass
-class FileProcesspr:
-  raw_input: Dict[str,Any] #output from iterable_from_file
-  output_for_df: List[Dict] = field(default_factory=list,init=False) # class var
+  def read_hunter_trace_file(filename):
+    with open(filename) as f:
+      lines = f.readlines()
+    assert len(lines) > 1, f"{filename=}, {lines=}"
+    return lines
 
-  def __post_init__(self):
-    self.prepare_lines_for_df(self.raw_input)
-
-  def prepare_lines_for_df(self, filelines:List[str]):
-    while (line := next(filelines, None)):
-      try:
-        match = next(m for rgx in rgxs if (m := rgx.search(line) ))
-        if len(gd1 := match.groupdict()) == 6:
-          dfdict:Dict = code_dfdict(**gd1)
-          self.output_for_df.append(dfdict)
-        elif len(gd2 := match.groupdict()) == 3:
-          dfdict:Dict = code_dfdict(**gd2)
-          prev_dfdict:Dict = self.output_for_df[-1]
-          lst4linecont_entries:List = prev_dfdict['line_continuation']
-          lst4linecont_entries.append(dfdict['line_continuation'])
-      except StopIteration as exc:
-        from pdb import set_trace as st
+  def process_lines_for_df(filelines):
+    assert len([elm for elm in filelines]) > 1, filelines
+    processed_lines = []
+    for line in filelines:
+      if not line.strip():
+        continue
+      match = next(m for rgx in rgxs if (m := rgx.search(line) ))
+      if len(gd1 := match.groupdict()) == rgxs[0].groups:
+        dfdict = dct4df(**gd1)
+        processed_lines.append(dfdict)
+      elif len(gd2 := match.groupdict()) == rgxs[1].groups:
+        dfdict = dct4df(**gd2)
+        prev_dfdict = processed_lines[-1]
+        prev_dfdict['source_data']+=dfdict['source_data']
+        prev_dfdict['symbol'].append(dfdict['symbol'])
+      else:
+        import IPython
         from IPython.core.ultratb import ColorTB,VerboseTB
         print(ColorTB().text(*sys.exc_info()))
+        print(f"{vars()=}")
         debug_regex(rgxs,line,sys.exc_info())
-        raise MyException(f"rgx{rgx}\nline{line}\nmatch{match}", bad_value=rgx)
+        st(); raise SystemExit; os._exit(-1)
+    assert len(processed_lines) > 1, processed_lines
+    return processed_lines
 
+  def get_df(processed_filelines):
+    assert processed_filelines and len(processed_filelines) > 1, processed_filelines
+    df = pd.DataFrame(processed_filelines)
+    columns = ['home','interpaths','filename','symbol','event_kind','line_number','source_data']
+    return df[columns]
 
-def readfile(filename):
-  lines = iterable_from_file(filename)
-  return lines
-
-def process_lines_for_df(filelines):
-  processed_file = FileProcessor(filelines)
-  data4df = processed_file.output_for_df
-  return data4df
+  sns = SimpleNamespace(entry = entry)
+  return sns.entry
+get_df_from_tracefile = _get_df_from_tracefile()
 
 if __name__ == "__main__":
+  filenames = FILENAMES
   for filename in filenames:
     filename = f"../{filename}"
     lines = readfile(filename)
     data4df = process_lines_for_df(lines)
-    print(data4df)
-

@@ -1,5 +1,3 @@
-import cgitb
-cgitb.enable(format='text')
 
 class MyException(Exception):
     """Add extra properties to a special exception
