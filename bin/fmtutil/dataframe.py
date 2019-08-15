@@ -1,6 +1,6 @@
 import sys
 import ast
-import re
+import re,os
 import pandas as pd
 import numpy as np
 import itertools
@@ -17,21 +17,23 @@ from beautifultable import BeautifulTable
 from itertools import accumulate
 from IPython.core import ultratb
 sys.excepthook = ultratb.VerboseTB()
+import better_exceptions
+# better_exceptions.hook()
 import traceback as tb
 # exc = sys.exc_info()
 # exc_tb = exc[2]
 # tb.print_exception(*exc)
 # tb.print_tb(exc_tb)
 
-def colorizetxt(txt,bgc=None,fgc=None):
-  d = {
-      "blu":f'\x1b[0;34m',
-      "grn":f'\x1b[0;32m',
-      "cyn":f'\x1b[0;36m'
-  }
-  reset = f'\x1b[0m'
-  rv = f"{d.get(bgc)}{txt}{reset}"
-  return rv
+# def colorizetxt(txt,bgc=None,fgc=None):
+#   d = {
+#       "blu":f'\x1b[0;34m',
+#       "grn":f'\x1b[0;32m',
+#       "cyn":f'\x1b[0;36m'
+#   }
+#   reset = f'\x1b[0m'
+#   rv = f"{d.get(bgc)}{txt}{reset}"
+#   return rv
 
 def _format_snoop_datacell():
   ledger = {}
@@ -40,34 +42,20 @@ def _format_snoop_datacell():
     ('/Users/alberthan/VSCodeProjects/vytd','vytd'),
     ('object at','@')
   ]
+  d = {
+    "1":f'|\x1b[0;34m',
+    "2":f'|\x1b[0;32m',
+    "3":f'|\x1b[0;36m',
+    "4":f'|\x1b[0;33m'
+  }
 
   def entry(cell):
     assert isinstance(cell,list) and isinstance(cell[0],str), f'{type(cell)=}{cell=}'
     cleaned_cell = [elm.strip() for elm in cell]
-    paired_cell = [(elm.split(':=') if ':=' in elm else elm.split(':')) for elm in cleaned_cell]
+    paired_cell = [(elm.split(':=',1) if ':=' in elm else elm.split(':',1)) for elm in cleaned_cell]
     labeled_cell = {k.strip():v.strip() for k,v in paired_cell}
-    fmtd_lst_o_str = process_cell_dct(labeled_cell) # List
-    return iter(fmtd_lst_o_str) # Iterator
-
-  def process_cell_dct(cell:Dict):
-    lst_o_fmtd_snoop_lines = []
-    for indent_flag,(k,v) in enumerate(cell.items()):
-      if not indent_flag:
-        fmtd_kv_str = f"{process_key(k)}: {process_val(v)}"
-      else:
-        fmtd_kv_str = f"{space*2}{process_key(k)}: {process_val(v)}"
-      lst_o_fmtd_snoop_lines.append(fmtd_kv_str)
-    return lst_o_fmtd_snoop_lines
-
-  def process_key(k:str):
-    d = {
-      "1":f'\x1b[0;34m',
-      "2":f'\x1b[0;32m',
-      "3":f'\x1b[0;36m',
-      "4":f'\x1b[0;33m'
-    }
-    rv = f"{d[k[0]]}{(k[1:])}\x1b[0m"
-    return rv
+    fmtd_lst_o_str_nc, fmtd_lst_o_str_c = process_snoop_dct(labeled_cell,'nc'), process_snoop_dct(labeled_cell,'c')
+    return (fmtd_lst_o_str_nc, fmtd_lst_o_str_c)
 
   implies_iterable = lambda v: v.startswith('[')
   def hard_coded_mods(v):
@@ -75,6 +63,23 @@ def _format_snoop_datacell():
     for hcr in hard_coded_replacements:
       v = v.replace(*hcr)
     return v
+
+  def process_snoop_dct(cell:Dict,color:str):
+    lst_o_fmtd_snoop_lines = []
+    for indent_flag,(k,v) in enumerate(cell.items()):
+      if not indent_flag:
+        fmtd_kv_str = f"{process_key(k,color)}: {process_val(v)}"
+      else:
+        fmtd_kv_str = f"{space*2}{process_key(k,color)}: {process_val(v)}"
+      lst_o_fmtd_snoop_lines.append(fmtd_kv_str)
+    return lst_o_fmtd_snoop_lines
+
+  def process_key(k:str,c:str):
+    if c == 'nc':
+      rv = f"{k[1:]}"
+    else:
+      rv = f"{d[k[0]]}{(k[1:])}\x1b[0m"
+    return rv
 
   def process_val(v:str):
     v = hard_coded_mods(v)
@@ -111,36 +116,66 @@ def _format_call_datacell():
   ]
   rgx1 = re.compile(r"(?P<funkname>.+?)(?P<fargs>\(.*\))")
   rgx2 = re.compile(r"(?P<funkname>.+?):\s(?P<fargs>\(.+\))")
+  d = {
+    "1":f'\x1b[0;34m',
+    "2":f'\x1b[0;32m',
+    "3":f'\x1b[0;36m',
+    "4":f'\x1b[0;33m'
+  }
 
   def entry(cell,event_kind):
     assert isinstance(cell,list) and len(cell) == 1, f'{type(cell)=}{cell=}'
     cell0 = cell[0]
     if event_kind.strip() not in ['exception','call']:
-      return cell0
-    fmtd_str = process_exc_event_cell(cell0) if ('exception' in event_kind) else process_call_event_cell(cell0) if (event_kind == 'call' or '=' in cell0) else st()
-    return fmtd_str # str
+      return cell0, cell0
+    fmtd_str_nc,fmtd_str_c = (process_exc_event_cell(cell0) # TODO: add a var here to cause an error
+      if ('exception' in event_kind)
+      else process_call_event_cell(cell0)
+      if (event_kind == 'call' or '=' in cell0)
+      else st())
+    return fmtd_str_nc,fmtd_str_c # str
 
   def process_call_event_cell(cell) -> str:
     funkname,fargs = rgx1.search(cell).groupdict().values()
     # ['argv=None)','argv=None)']
-    if fargs == '()':
-      return f"{funkname}{fargs}"
     nicely_prepared_cell_args = _split_logic_for_call_datacell(fargs)
+    if fargs == '()':
+      return f"{funkname}{fargs}",f"{funkname}{fargs}"
     cleaned_cell_args = [elm.strip() for elm in nicely_prepared_cell_args]
-    paired_cell_args = [elm.split('=') for elm in cleaned_cell_args]
+    paired_cell_args = [elm.split('=',1) for elm in cleaned_cell_args]
     labeled_cell_args = {k.strip():v.strip() for k,v in paired_cell_args}
-    lst_o_keys = process_cell_dct(labeled_cell_args) # List
-    joined_loks = ",".join(lst_o_keys)
-    fmtd_str = f"{funkname}({joined_loks})"
-    return fmtd_str
+    lst_o_keys_nc, lst_o_keys_c = process_cell_dct(labeled_cell_args,'nc'), process_cell_dct(labeled_cell_args,'c')
+    joined_loks_nc,joined_loks_c = ",".join(lst_o_keys_nc),",".join(lst_o_keys_c)
+    fmtd_str_nc, fmtd_str_c = f"{funkname}({joined_loks_nc})",f"{funkname}({joined_loks_c})"
+    return fmtd_str_nc, fmtd_str_c
+
+  def process_cell_dct(cell:Dict,color:str) -> List[str]:
+    lst_o_keys = []
+    for i,(k,v) in enumerate(cell.items()):
+      k = process_key(k,i,color)
+      lst_o_keys.append(k)
+    return lst_o_keys
+
+  def process_key(k:str,i:int,c:str):
+    if c == 'nc':
+      if i == 1:
+        rv = f"{k}"
+      else:
+        rv = f"{k}"
+    else:
+      if i == 1:
+        rv = f"{d['1']}{k}\x1b[0m"
+      else:
+        rv = f"{d['2']}{k}\x1b[0m"
+    return rv
 
   def process_exc_event_cell(cell) -> str:
     funkname,fargs = rgx2.search(cell).groupdict().values()
     # (<class 'OSError'>, OSError('dlopen(libc.so.6, 6): image not found'), <traceback object at 0x104bfa500>)
     split_cell = fargs[1:-1].split(',')
     exc_info_value = "".join(split_cell[1:3]) # sys.exc_info[1]
-    fmtd_str = f"{funkname}({exc_info_value})"
-    return fmtd_str
+    fmtd_str_nc,fmtd_str_c = f"{funkname}({exc_info_value})",f"{funkname}({exc_info_value})"
+    return fmtd_str_nc,fmtd_str_c
 
   def _split_logic_for_call_datacell(extracted_args_cell) -> List[str]:
     _split1 = extracted_args_cell.split(',')
@@ -162,11 +197,6 @@ def _format_call_datacell():
     record.append(final)
     return record
 
-  def process_cell_dct(cell:Dict) -> List[str]:
-    lst_o_keys = []
-    for k,v in cell.items():
-      lst_o_keys.append(k)
-    return lst_o_keys
 
   sns = SimpleNamespace(entry=entry)
   return sns.entry
@@ -177,8 +207,11 @@ class LiterateUtil:
   def __init__(self):
     self.FormatLengths = namedtuple('FormatLengths', ['Index', 'filepath', 'line_number', 'event_kind', 'call_data', 'snoop_data'])
     self.FormatStrings = namedtuple('FormatStrings', ['Index', 'filepath', 'line_number', 'event_kind', 'call_data', 'snoop_data'])
+    self.rgx1 = re.compile(r"(|\\x1b)\[\d;\d+m") # 10
+    self.rgx2 = re.compile(r"(|\\x1b)\[0m")      # 7
+    self.lengths = [9,20,9,10,80,180]
 
-  def typeset(self,strings,lengths=None):
+  def typeset(self,dnc,dc):
     """copy editor
         ['Index', 'filepath', 'line_number', 'event_kind', 'call_data', 'snoop_data']
     Arguments:
@@ -187,45 +220,84 @@ class LiterateUtil:
         lengths {iterable[int]}
     lst_o_vals = [f"{str(r.Index):9.9}",f"{r.filepath:>20.20}",f"{str(r.line_number):<9.9}",f"{r.event_kind:>10.10}",f"{next(caitrr,'^'):<80.80}",f"{next(snitrr,'&'):<180.180}"]
     """
-    flens = self.FormatLengths(*lengths) if lengths else self.FormatLengths(9,20,9,10,80,180)
+    stringsnc,stringsc = dnc['strings'],dc['strings']
+    # sc = [s for s in strings[:5]] + [process_snoop_]
+    # rgxcnt = [len(self.rgx1.findall(str(s))) for s in strings]
+    # lengths = [r * 17 + l for l,r in zip(lengths,rgxcnt)]
+    flens = self.FormatLengths(*self.lengths)
     _borders = list(accumulate([l for l in flens])) # 9+20+9+80=118 (snp starts on 119)
-    fstrs = self.FormatStrings(*strings)
+    # if len(strings) != 6: st()
+    fstrsnc,fstrsc = self.FormatStrings(*stringsnc),self.FormatStrings(*stringsc)
     padtrunc = [f"{pad}.{trunc}" for pad,trunc in zip(flens,flens)]
-    fmtdlst = [f"{str(s):<{pt}}" for s,pt in zip(fstrs,padtrunc)]
-    fmtdstr = "".join(fmtdlst)
-    return fmtdstr
+    fmtdlstnc = [f"{str(s):<{pt}}" for s,pt in zip(fstrsnc,padtrunc)]
+    fmtdlstc = [f"{str(s):<{pt}}" for s,pt in zip(fstrsc,padtrunc)]
+    fmtdstrnc,fmtdstrc = "".join(fmtdlstnc),"".join(fmtdlstnc)
+    return fmtdstrnc,fmtdstrc
 
 def _write_literate_style_df():
   util = LiterateUtil()
+  space = "\u0020"
+  typeset_args_lengths = [9,20,9,10,80,180]
 
-  def entry(df,color=True):
-    return write_literate_style_df(df,color=color)
+  def typeset_args1(r):
+    ca_nc,ca_c = format_call_datacell(r.call_data,r.event_kind)
+    sn_nc,sn_c = format_snoop_datacell(r.snoop_data)
+    stringsnc = [r.Index, r.filepath, r.line_number, r.event_kind, ca_nc, sn_nc]
+    stringsc = [r.Index, r.filepath, r.line_number, r.event_kind, ca_c, sn_c]
+    dnc = {
+      "strings": stringsnc,
+      "lengths": typeset_args_lengths #[clrcnt(s)*15+l for s,l in zip(strings,typeset_args_lengths)]
+    }
+    dc = {
+      "strings": stringsc,
+      "lengths": typeset_args_lengths
+    }
+    return dnc,dc
 
-  def write_literate_style_df(df,color=True):
-    space = "\u0020"
-    _lst = []
+  def typeset_args2(r):
+    sn_nc,sn_c = format_snoop_datacell(r.snoop_data)
+    stringsc = [space]*5 + [sn_c]
+    stringsnc = [space]*5 + [sn_nc]
+    dnc = {
+      "strings": stringsnc,
+      "lengths": typeset_args_lengths #[clrcnt(s)*15+l for s,l in zip(strings,typeset_args_lengths)]
+    }
+    dc = {
+      "strings": stringsc,
+      "lengths": typeset_args_lengths
+    }
+    return dnc,dc
+
+  def entry(df,filename,color=True):
+    return write_literate_style_df(df,filename,color=color)
+
+  def write_literate_style_df(df,filename,color=True):
+    _nclst,_clst = [],[]
     for rowtpl in df.itertuples():
       r = rowtpl
-      assert r._fields == ('Index', 'filepath', 'line_number', 'symbol', 'event_kind', 'call_data', 'code_data', 'snoop_data'), r
+      # assert r._fields == ('Index', 'filepath', 'line_number', 'symbol', 'event_kind', 'call_data', 'code_data', 'snoop_data'), r
       lines_for_row = len(r.snoop_data) - 1
-      ca_str,sn_itrr = dtacels_itrr = format_call_datacell(r.call_data,r.event_kind), format_snoop_datacell(r.snoop_data)
-      _sublst=[]
-      fmtdstr = util.typeset(strings=[r.Index,r.filepath,r.line_number,r.event_kind,ca_str,next(sn_itrr,'&')])
-      _sublst.append(fmtdstr)
-      while lines_for_row:
-        fmtdstr = util.typeset(strings=[space,space,space,space,'c',next(sn_itrr,'&')])
-        _sublst.append(fmtdstr)
-        lines_for_row -= 1
-      _sublst_as_str = "\n".join(_sublst)
-      _lst.append(_sublst_as_str)
-    _retval = "\n".join(_lst)
-    _retvalnc = noco(_retval)
-    write_to_file([('c',_retval),('nc',_retvalnc)])
-    return _retval
+      _ncsublst,_csublst=[],[]
+      dnc,dc = typeset_args1(r)
+      fmtdstr_nc,fmtdstr_c = util.typeset(dnc,dc)
+      _ncsublst.append(fmtdstr_nc);_csublst.append(fmtdstr_c)
+      for line in range(lines_for_row):
+        dnc,dc = typeset_args2(r)
+        fmtdstr_nc,fmtdstr_c = util.typeset(dnc,dc)
+        _ncsublst.append(fmtdstr_nc);_csublst.append(fmtdstr_c)
+      _ncsublst_as_str = "\n".join(_ncsublst);_csublst_as_str = "\n".join(_csublst)
+      _nclst.append(_ncsublst_as_str);_clst.append(_csublst_as_str)
+    _retvalnc,_retvalc = "\n".join(_nclst),"\n".join(_clst)
+    name_file_tpls = [(f"{filename}.c",_retvalc),(f"{filename}.nc",_retvalnc)]
+    write_to_file(name_file_tpls)
+    return _retvalnc,_retvalc
 
   def write_to_file(name_file_tpls):
     for name,filedata in name_file_tpls:
-      with open(f"lit.{name}.log", 'w') as f:
+      p = Path(name).resolve()
+      if not p.parent.exists():
+        p.parent.mkdir(parents=True,exist_ok=True)
+      with open(f"{name}.lit.log", 'w') as f:
         f.write(filedata)
 
   def noco(s):
@@ -239,7 +311,6 @@ def _write_literate_style_df():
   return sns.entry
 
 write_literate_style_df = _write_literate_style_df()
-
 class BeautifulUtil:
   def __init__(self):
     self.cols_and_widths = [("Index",9),("filepath",20),("line_number",9),("call_data",80),("snoop_data",80)]
@@ -333,12 +404,11 @@ def _groupby_filename() -> Dict[str,pd.DataFrame]:
   def entry(df,dfpath):
     util.dfpath = dfpath
     dct_o_dfs = group_df_by_filename(df)
-    util.write_df_logfiles(dct_o_dfs,dfpath)
     return dct_o_dfs
 
   def group_df_by_filename(df):
     gbs = get_groups_as_lst_o_dfs(df.copy())
-    def filename_from_df(df): return Path(df.iloc[0].filepath).name.replace('.py','.group.log')
+    def filename_from_df(df): return Path(df.iloc[0].filepath).name.replace('.py','')
     dct_o_filename_df_pairs = {filename_from_df(g):g for g in gbs}
     return dct_o_filename_df_pairs
     for gb,filename in zip(gbs,filenames):
@@ -384,7 +454,6 @@ def _filter_line_events():
         get_line_event_mask,
         lambda mask: df[mask]
     )(df)
-    util.write_df_logfile(fltrd_df,dfpath)
     return fltrd_df
 
   def get_line_event_mask(df):
@@ -435,7 +504,7 @@ class AggregateUtil:
         st()
     return linestrfmtd
 
-def _aggregate_dfs():
+def _aggregate_aggdfs():
   util = AggregateUtil()
 
   def entry(input_dfs,verbose=False):
@@ -544,7 +613,150 @@ def _aggregate_dfs():
 
   sns = SimpleNamespace(entry=entry)
   return sns.entry
-aggregate_dfs = _aggregate_dfs()
+aggregate_aggdfs = _aggregate_aggdfs()
+
+
+class TargetFuncUtil:
+  def __init__(self):
+    self.columns = ["filepath","line_number","symbol","event_kind","call_data","snoop_data"]
+
+  def base_dct_factory(self):
+    d = OrderedDict({
+        "home": None,
+        "interpaths": None,
+        "filename": None,
+        "line_number": None,
+        "symbol": None,
+        "event_kind": None,
+        "call_data": None,
+        "snoop_data": None
+    })
+    return d
+
+  def process_snoop_data(self, snp_dtacell):
+    """snp_dtacell: List[Datum]
+      Datum.split(':='): Mapping[str,StrWithBrackets]
+      StrWithBrackets[1:-1].split(',') = ValList = List[str]
+      "\n".join(ValList): str
+    """
+    space,cs = "\u0020",iter(['blu','grn','cyn'])
+    sublst:str
+    snp_dtacell:List
+    for sublst in snp_dtacell:
+      if (ce:=':=' in sublst) or (c:=':' in sublst):
+        def mapfunk(sep): return map(str.strip,sublst.split(sep))
+        sublstkey,sublstval = mapfunk(':=') if ce else mapfunk(':') if c else ('ERRR','RRROR')
+        sublstval = sublstval.replace("None", "Mome")
+        sublstval,sublstvallen = [sublstval] if not (isinstance(sublstval,list)) else sublstval, sublstval.count(',') + 1
+        valsplitaslst = sublstval[1:-1].split(',') if ',' in sublstval else [sublstval]
+        linestrfmtd = f"{sublstkey}({sublstvallen}): [{valsplitaslst[0][0]:<80.80}{',…' if sublstvallen > 1 else ''}]"
+      else:
+        print(sublst)
+        st()
+    return linestrfmtd
+
+def _aggregate_tfdfs():
+  util = TargetFuncUtil()
+
+  def entry(input_dfs,verbose=False):
+    # at this point we have 3 input_dfs
+    # rename data columns, merge into one df>to_dict,iterate_over_rows,
+    assert isinstance(input_dfs[0],pd.DataFrame) and len(input_dfs[0]) > 1, input_dfs
+    tfdf = compose_left(
+        rename_data_columns,
+        merge_dfs_into_one,
+    )(input_dfs)
+    if verbose:
+      return tfdf
+    print(tfdf.columns)
+    assert all([col in tfdf.columns for col in util.columns]), tfdf.columns
+    return tfdf[["filepath","line_number","symbol","event_kind","call_data","snoop_data",]]
+
+  def rename_data_columns(input_dfs):
+    """
+    ..input_dfs:: {calldf,codedf,snoopdf}
+    ..returns  :: {"call":calldf,"code":codedf,"snoop":snoopdf}`
+    """
+    def rename(df,name): return df.rename(columns={"source_data":f"{name}_data"},inplace=False)
+    dct_o_renamed_dfs = {name:rename(df,name) for name,df in zip(["call","snoop"],input_dfs)}
+    assert all([(colname in df.columns and len(df) > 1) for colname,df in zip(["call_data","snoop_data"],dct_o_renamed_dfs.values())])
+    return dct_o_renamed_dfs
+
+  def merge_dfs_into_one(dct_o_renamed_dfs):
+    tfdf = compose_left(
+        iterate_over_rows,
+        aggregate_lst_o_merged_rowdcts,
+    )(dct_o_renamed_dfs)
+    return tfdf
+
+  def colorize_lst(l,bc=None,fc=None,c=False):
+    """usage: c=True for colors"""
+    if not c: return l
+    bgc = intense_background_black = ('\x1b[0;100m','\x1b[0m')
+    strt = [bgc[0] for _ in range(len(l))]
+    stop = [bgc[1] for _ in range(len(l))]
+    zipd = zip(strt,l,stop)
+    _jmp = _joinmepls = []
+    for rt,txt,op in zipd:
+      s = f"{rt}{txt}{op}"
+      _jmp.append(s)
+    # clrzd_str = "\n".join(_jmp)
+    return _jmp
+
+  def create_filepath(home,interpath,filename):
+    # from pdb import set_trace as st; st()
+    h = home
+    i = f"{interpath}/" if interpath else ""
+    f = filename
+    rv = f"{h}/{i}{f}"
+    return rv
+
+  def iterate_over_rows(dct_o_rnd_dfs):
+    lst_o_merged_rowdcts = []
+    try:
+      cadf,sndf = [dct_o_rnd_dfs.get(k) for k in ("call","snoop")]
+      si,slen,sdone = 0, len(sndf), False
+    except BaseException:
+      import IPython
+      from IPython.core.ultratb import ColorTB,VerboseTB
+      from inspect import getfile
+      print(getfile(IPython.core.ultratb))
+      print(ColorTB().text(*sys.exc_info()))
+    for i in range(len(cadf)):
+      base_dct = util.base_dct_factory()
+      car,snr = cadf.iloc[i],sndf.iloc[si]
+      cadata = car.call_data
+      if (not sdone and (snr.get('line_number',None) == car.line_number)):
+        sndata = snr.snoop_data
+        assert isinstance(sndata,list) and isinstance(sndata[0],str), sndata[0]
+        sdone,si = (end:=bool(si == slen)), (si if end else si + 1)
+      try:
+        base_dct.update({
+            "home": car.home,
+            "interpaths": car.interpaths,
+            "filename": car.filename,
+            "filepath": create_filepath(car.home,car.get('interpath',''),car.filename),
+            "line_number": car.line_number,
+            "event_kind": car.event_kind,
+            "symbol": [sym for sym in (getattr(car.symbol,'symbol',None))] if (getattr(car.symbol,'symbol',None)) else [],
+            "call_data": colorize_lst([elm for elm in cadata]),
+            "snoop_data": sndata if sndata else "<None>",
+        })
+        lst_o_merged_rowdcts.append(base_dct)
+      except BaseException:
+        from IPython.core.ultratb import ColorTB,VerboseTB
+        print(ColorTB().text(*sys.exc_info()))
+    assert len(lst_o_merged_rowdcts) > 1, lst_o_merged_rowdcts
+    return lst_o_merged_rowdcts
+
+  def aggregate_lst_o_merged_rowdcts(merged_rowdcts):
+    tfdf = pd.DataFrame(merged_rowdcts)
+    return tfdf
+
+  sns = SimpleNamespace(entry=entry)
+  return sns.entry
+aggregate_tfdfs = _aggregate_tfdfs()
+
 
 def get_multiple_entry_code_data_mask(df):
   m = (df['line_number'] == '655') & (df['filepath'] == 'YoutubeDL.py') & (df['event_kind'] == 'call')

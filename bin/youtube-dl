@@ -2,6 +2,7 @@
 import youtube_dl
 import hunter
 from youtube_dl.hunterconfig import QueryConfig
+from hunter.tracer import Tracer
 from pathlib import Path
 from pdb import set_trace as st
 import os
@@ -9,17 +10,9 @@ import sys
 
 if __name__ == '__main__':
   qc = QueryConfig()
-  qcfg = [qc.full(),qc.noloop()]
+  qcfg = [qc.targetfunc()]#,qc.noloop()]
+  tracer = Tracer()
   for query,actions,outputs,filenames,write_func,pkldf in qcfg:
-    try:
-      hunter.trace(query)
-      youtube_dl.main()
-      write_func()
-      if rv == '':
-        write_func()
-        assert False
-    except:
-      write_func()
-      # st()
-    finally:
-      write_func()
+    tracer.trace(query)
+    youtube_dl.main()
+    write_func()

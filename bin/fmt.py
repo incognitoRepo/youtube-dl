@@ -12,6 +12,7 @@ import fmtutil.exception as fue
 import fmtutil.constants as fuc
 import fmtutil.utils as fu
 import fmtutil.public_goods as fpgs
+import fmtutil.row as frow
 import pysnooper
 import numpy as np
 import pandas as pd
@@ -26,57 +27,75 @@ from IPython.display import display, HTML
 def pretty_print(df):
   return display(HTML(df.to_html().replace("\\n","<br>")))
 
+def initdf(initdf):
+  initdf.iloc[10:14,0].filepath = 'extractor/__init__.py'
+  initdf.iloc[14:16,:].filepath = 'downloader/__init__.py'
+  initdflst = list(initdf.itertuples())
+  idflm4 = initdflst[-4]
+  print(idflm4)
+  return idflm4
 
-def format_main(filenames):
+def agg_main():
+  query,actions,outputs,filenames,write_func,pkldf = qcfg = QueryConfig().full()
+  dfpath = Path('/Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/bin/agg.full/df.pkl')
   dfs = {}
   for filename in filenames:
     df = fur.get_df_from_tracefile(filename)
     assert isinstance(df,pd.DataFrame), df
     dfs[filename] = df
-  aggdf = fud.aggregate_dfs(list(dfs.values()))
+  aggdf = fud.aggregate_aggdfs(list(dfs.values()))
+  aggdf.to_pickle(dfpath)
+  aggdf = pd.read_pickle(dfpath)
+  literate_style = fud.write_literate_style_df(aggdf,filename="agg.full/agg")
+  fltrd_noline_df = fud.filter_line_events(aggdf,dfpath)
+  lit_style_noline = fud.write_literate_style_df(fltrd_noline_df,filename="agg.full/fltrd/noline")
+  dct_o_dfs_by_filename = fud.groupby_filename(fltrd_noline_df,dfpath)
+  for k,v in dct_o_dfs_by_filename.items():
+    fud.write_literate_style_df(v,filename=f"agg.full/fltrd/grpd/{k}")
   return aggdf
 
-if __name__ == "__main__":
-  dbg_flag = True
-  pd.set_option('max_colwidth', 80)
-  query,actions,outputs,filenames,write_func,pkldf = qcfg = QueryConfig().full()
-  print(actions)
-  dfpath = Path(pkldf.keywords['dfpath']).absolute()
-  if dfpath.exists():
-    if dbg_flag:
-      pkldf(mode='rm')
-    else:
-      aggdf = pkldf(mode='r')
-  if len(sys.argv) > 1:
-    parser = argparse.ArgumentParser(
-        description='Enter a QueryConfig key',
-        epilog="e.g., python fmt.py full")
-    parser.add_argument('qckey', type=str, nargs=1,
-                        help='the common suffix for each file',
-                        default="full.log")
-    args = parser.parse_args()
-    meth = args.qckey.pop().split('.')[0]
+def tf_main():
+  query,actions,outputs,filenames,write_func,pkldf = qcfg = QueryConfig().targetfunc()
+  dfpath = Path('/Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/bin/tfdf/df.pkl')
+  dfs = {}
+  for filename in filenames:
+    df = fur.get_df_from_tracefile(filename)
+    assert isinstance(df,pd.DataFrame), df
+    dfs[filename] = df
+  tfdf = fud.aggregate_tfdfs(list(dfs.values()))
+  dfpath.parent.mkdir(parents=True,exist_ok=True)
+  tfdf.to_pickle(dfpath)
+  tfdf = pd.read_pickle(dfpath)
+  literate_style = fud.write_literate_style_df(tfdf,filename="targetfuncs/tfdf")
+  fltrd_noline_df = fud.filter_line_events(tfdf,dfpath)
+  lit_style_noline = fud.write_literate_style_df(fltrd_noline_df,filename="targetfuncs/fltrd/noline")
+  dct_o_dfs_by_filename = fud.groupby_filename(fltrd_noline_df,dfpath)
+  for k,v in dct_o_dfs_by_filename.items():
+    fud.write_literate_style_df(v,filename=f"targetfuncs/fltrd/grpd/{k}")
+  idf = dct_o_dfs_by_filename['__init__']
+  idf.to_pickle(dfpath.parent.joinpath('idf.pkl'))
+  row = initdf(idf)
+  parsed = frow.process_verbose_row(row)
+  print(parsed)
+  return idf, row, parsed
+
+def cli():
+  parser = argparse.ArgumentParser(
+    description='Enter a QueryConfig key',
+    epilog="e.g., python fmt.py full")
+  parser.add_argument('--qckey', type=str, nargs=1,
+                      help='the common suffix for each file',
+                      default="full.log")
+  args = parser.parse_args()
+  meth = args.qckey.pop().split('.')[0]
+  if len(sys.argv) == 2:
     with fu.methcaller(QueryConfig(),meth) as m:
       filenames = m().filenames
-    aggdf = format_main(filenames)
-    pkldf(mode='w',df=aggdf)
-  if dbg_flag:
-    aggdf = format_main(filenames)
-    pkldf(mode='w',df=aggdf)
-  print(aggdf.head())
-  literate_style = fud.write_literate_style_df(aggdf,color=False)
-  with open('lit.log', 'w') as f:
-    f.write(literate_style)
-  print(literate_style)
+  return filenames
 
-  fltrd_noline_df = fud.filter_line_events(aggdf,dfpath)
-  dct_o_dfs_by_filename = fud.groupby_filename(aggdf,dfpath)
-  fpgs.ppd(aggdf.snoop_data,pat='display.max_colwidth')
+if __name__ == "__main__":
+  # aggdf = agg_main()
+  idf, row, parsed = tf_main()
+  # literate_style = fud.write_literate_style_df(tfdf,filename="tfdf.func/tfdf")
 
 
-call_evts = aggdf[aggdf['event_kind'].str.contains('call')]
-ca = call_evts.call_data
-ca1,ca2,ca3,ca4,ca5,ca6 = ca
-exc_evts = aggdf[aggdf['event_kind'].str.contains('exce')]
-ex = exc_evts.call_data
-ex1,ex2,ex3 = ex

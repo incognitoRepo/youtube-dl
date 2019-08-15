@@ -1,0 +1,110 @@
+---------------------------------------------------------------------------
+ValueError                                Traceback (most recent call last)
+~/VSCodeProjects/vytd/src/youtube-dl/bin/fmt.py in <module>
+     65   # filter line events
+     66   fltrd_noline_df = fud.filter_line_events(aggdf,dfpath)
+---> 67   lit_style_noline = fud.write_literate_style_df(fltrd_noline_df,filename="agg.full/fltrd/noline")
+        global lit_style_noline1005 = undefined1003
+        global fud.write_literate_style_df1005 = <function _write_literate_style_df.<locals>.entry at 0x112e1c160>998
+        global fltrd_noline_df1005 =             filepath line_number        symbol event_kind                                 call_data                             code_data       snoop_data
+3  yt_dl/__init__.py          49  [None, None]  call                  [   => _real_main(argv=None)]          [def _real_main(argv=None):]  [1argv := None]
+6    yt_dl/compat.py        2833  [None, None]  call       [      => workaround_optparse_bug9161()]  [def workaround_optparse_bug9161():]  [1argv := None]998
+        global filename1005 = undefined1003
+     68   # groupby filename
+     69   # dct_o_dfs_by_filename = fud.groupby_filename(fltrd_noline_df,dfpath)
+
+~/VSCodeProjects/vytd/src/youtube-dl/bin/fmtutil/dataframe.py in entry(df=            filepath line_number        symbol e... workaround_optparse_bug9161():]  [1argv := None], filename='agg.full/fltrd/noline', color=True)
+    271
+    272   def entry(df,filename,color=True):
+--> 273     return write_literate_style_df(df,filename,color=color)
+        global write_literate_style_df1005 = <function _write_literate_style_df.<locals>.entry at 0x112e1c160>998
+        df1005 =             filepath line_number        symbol event_kind                                 call_data                             code_data       snoop_data
+3  yt_dl/__init__.py          49  [None, None]  call                  [   => _real_main(argv=None)]          [def _real_main(argv=None):]  [1argv := None]
+6    yt_dl/compat.py        2833  [None, None]  call       [      => workaround_optparse_bug9161()]  [def workaround_optparse_bug9161():]  [1argv := None]TRY987
+        filename1005 = 'agg.full/fltrd/noline'TRY987
+        color1005 = TrueTRY987
+    274
+    275   def write_literate_style_df(df,filename,color=True):
+
+~/VSCodeProjects/vytd/src/youtube-dl/bin/fmtutil/dataframe.py in write_literate_style_df(df=            filepath line_number        symbol e... workaround_optparse_bug9161():]  [1argv := None], filename='agg.full/fltrd/noline', color=True)
+    280       lines_for_row = len(r.snoop_data) - 1
+    281       _ncsublst,_csublst=[],[]
+--> 282       dnc,dc = typeset_args1(r)
+        dnc1005 = undefined993
+        dc1005 = undefined993
+        global typeset_args11005 = undefined1003
+        r1005 = Pandas(Index=3, filepath='yt_dl/__init__.py', line_number='49', symbol=[None, None], event_kind='call     ', call_data=['   => _real_main(argv=None)'], code_data=['def _real_main(argv=None):'], snoop_data=['1argv := None'])TRY987
+    283       fmtdstr_nc,fmtdstr_c = util.typeset(dnc,dc)
+    284       _ncsublst.append(fmtdstr_nc);_csublst.append(fmtdstr_c)
+
+~/VSCodeProjects/vytd/src/youtube-dl/bin/fmtutil/dataframe.py in typeset_args1(r=Pandas(Index=3, filepath='yt_dl/__init__.py', li...main(argv=None):'], snoop_data=['1argv := None']))
+    241
+    242   def typeset_args1(r):
+--> 243     ca_nc,ca_c = format_call_datacell(r.call_data,r.event_kind)
+        ca_nc1005 = undefined993
+        ca_c1005 = undefined993
+        global format_call_datacell1005 = <function _format_call_datacell.<locals>.entry at 0x112e08310>998
+        r.call_data1005 = ['   => _real_main(argv=None)']TRY987
+        r.event_kind1005 = 'call     'TRY987
+    244     sn_nc,sn_c = format_snoop_datacell(r.snoop_data)
+    245     stringsnc = [r.Index, r.filepath, r.line_number, r.event_kind, ca_nc, sn_nc]
+
+
+
+~/VSCodeProjects/vytd/src/youtube-dl/bin/fmtutil/dataframe.py in entry(cell=['   => _real_main(argv=None)'], event_kind='call     ')
+    129     if event_kind.strip() not in ['exception','call']:
+    130       return cell0
+--> 131     fmtd_str_nc,fmtd_str_c,a = (process_exc_event_cell(cell0)zr
+        fmtd_str_nc1005 = undefined993
+        fmtd_str_c1005 = undefined993
+        a1005 = undefined993
+        global process_exc_event_cell1005 = undefined1003
+        cell01005 = '   => _real_main(argv=None)'TRY987
+        event_kind1005 = 'call     'TRY987
+        global process_call_event_cell1005 = undefined1003
+        global st1005 = <function set_trace at 0x10e63d1f0>998
+    132       if ('exception' in event_kind)
+    133       else process_call_event_cell(cell0)
+
+ValueError: not enough values to unpack (expected 3, got 2)
+
+
+
+
+            f = inspect.currentframe()
+            # print(f.f_locals.keys())
+            # print(f.f_globals.keys())
+            print(f"((((*#^*)))(#)(*&LOCALS!!**&&&: {locals_.keys()}")
+            print("\n".join(lines))
+            print(f"{lines=},\n{lnum=}")
+            print(f'{lnum-index=}')
+            print(f"{index}")
+            # print(f"{lines[lnum]=}")
+            for i,line in enumerate(lines, lnum-index):
+                print(i, lnum)
+            _line = lines[lnum-(lnum-index)]
+            _var,_val = _split = _line.split('=',1)
+            rgx = re.compile(r"(?P<funk>[A-z_][A-z_0-9]+)\((?P<args>[A-z_][A-z_0-9]+)\)")
+            print(f"\n\n{_val=}\n\n")
+            gd = rgx.search(_val).groupdict()
+            funk,args = locals_[gd['funk']], locals_[gd['args']]
+            _eval = funk(args)
+            print(_eval)
+
+
+print(f"<--{co_argcount=}||>")
+print(f"<--{co_cellvars=}||>")
+print(f"<--{co_code=}||>")
+print(f"<--{co_consts=}||>")
+print(f"<--{co_filename=}||>")
+print(f"<--{co_firstlineno=}||>")
+print(f"<--{co_flags=}||>")
+print(f"<--{co_freevars=}||>")
+print(f"<--{co_kwonlyargcount=}||>")
+print(f"<--{co_lnotab=}||>")
+print(f"<--{co_name=}||>")
+print(f"<--{co_names=}||>")
+print(f"<--{co_nlocals=}||>")
+print(f"<--{co_posonlyargcount=}||>")
+print(f"<--{co_stacksize=}||>")
+print(f"<--{co_varnames=}||>")

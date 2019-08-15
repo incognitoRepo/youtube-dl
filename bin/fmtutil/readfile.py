@@ -11,6 +11,9 @@ from .exception import MyException
 from .constants import FILENAMES
 from toolz.functoolz import compose_left
 from collections import OrderedDict
+from IPython.core import ultratb
+sys.excepthook = ultratb.VerboseTB()
+
 rgxs = [
   re.compile( # regular line
       r"(?P<home>yt_dl)/(?P<interpaths>(?:(?!\s{2}).)+[/]){0,2}(?P<filename>.*?py)"
@@ -24,6 +27,12 @@ rgxs = [
       r"|(?:[\s]{3}[*\s]{6})"
       r"|(?:[.]{2}[.\s]{6})"
       r")\s"
+      r"(?P<source_data>[\s]*.+)$"
+  ),
+  re.compile( # line continuation line
+      r"^\s*"
+      r"(?P<symbol>\[[.]{3}\])"
+      r"\s?"
       r"(?P<source_data>[\s]*.+)$"
   )
 ]
@@ -69,19 +78,24 @@ def _get_df_from_tracefile():
     for line in filelines:
       if not line.strip():
         continue
-      match = next(m for rgx in rgxs if (m := rgx.search(line) ))
-      if len(gd1 := match.groupdict()) == rgxs[0].groups:
+      m1,m2,m3 = [rgx.search(line) for rgx in rgxs]
+      if m1:
+        gd1 = m1.groupdict()
         dfdict = dct4df(**gd1)
         processed_lines.append(dfdict)
-      elif len(gd2 := match.groupdict()) == rgxs[1].groups:
+      elif m2:
+        gd2 = m2.groupdict()
         dfdict = dct4df(**gd2)
         prev_dfdict = processed_lines[-1]
         prev_dfdict['source_data']+=dfdict['source_data']
         prev_dfdict['symbol'].append(dfdict['symbol'])
+      elif m3:
+        gd3 = m3.groupdict()
+        dfdict = dct4df(**gd3)
+        prev_dfdict = processed_lines[-1]
+        prev_dfdict['source_data']+=dfdict['source_data']
+        prev_dfdict['symbol'].append(dfdict['symbol'])
       else:
-        import IPython
-        from IPython.core.ultratb import ColorTB,VerboseTB
-        print(ColorTB().text(*sys.exc_info()))
         print(f"{vars()=}")
         debug_regex(rgxs,line,sys.exc_info())
         st(); raise SystemExit; os._exit(-1)

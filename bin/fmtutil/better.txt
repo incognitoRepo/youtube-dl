@@ -1,0 +1,26 @@
+Traceback (most recent call last):
+  File "fmt.py", line 67, in <module>
+    lit_style_noline = fud.write_literate_style_df(fltrd_noline_df,filename="agg.full/fltrd/noline")
+                       │                           └             filepath line_number        symbol event_kind                                 call_data                             ...
+                       └ <module 'fmtutil.dataframe' from '/Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/bin/fmtutil/dataframe.py'>
+  File "/Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/bin/fmtutil/dataframe.py", line 273, in entry
+    return write_literate_style_df(df,filename,color=color)
+           │                       │  │              └ True
+           │                       │  └ 'agg.full/fltrd/noline'
+           │                       └             filepath line_number        symbol event_kind                                 call_data                             ...
+           └ <function _write_literate_style_df.<locals>.write_literate_style_df at 0x11468d280>
+  File "/Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/bin/fmtutil/dataframe.py", line 282, in write_literate_style_df
+    dnc,dc = typeset_args1(r)
+             │             └ Pandas(Index=3, filepath='yt_dl/__init__.py', line_number='49', symbol=[None, None], event_kind='call     ', call_data=['   => _...
+             └ <function _write_literate_style_df.<locals>.typeset_args1 at 0x11468d0d0>
+
+
+
+  File "/Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/bin/fmtutil/dataframe.py", line 243, in typeset_args1
+    ca_nc,ca_c = format_call_datacell(r.call_data,r.event_kind)
+                 │                    │           └ Pandas(Index=3, filepath='yt_dl/__init__.py', line_number='49', symbol=[None, None], event_kind='call     ', call_data=['   => _...
+                 │                    └ Pandas(Index=3, filepath='yt_dl/__init__.py', line_number='49', symbol=[None, None], event_kind='call     ', call_data=['   => _...
+                 └ <function _format_call_datacell.<locals>.entry at 0x1146783a0>
+  File "/Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/bin/fmtutil/dataframe.py", line 131, in entry
+    fmtd_str_nc,fmtd_str_c,a = (process_exc_event_cell(cell0)
+ValueError: not enough values to unpack (expected 3, got 2)
