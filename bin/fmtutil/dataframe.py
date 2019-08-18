@@ -4,6 +4,14 @@ import re,os
 import pandas as pd
 import numpy as np
 import itertools
+import importlib.util
+spec = importlib.util.spec_from_file_location("row", "/Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/bin/fmtutil/row.py")
+row = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(row)
+# sys.modules[module_name] = module
+
+
+
 from pathlib import Path
 from pdb import set_trace as st
 from typing import Dict, List, Any, Iterable
@@ -757,8 +765,53 @@ def _aggregate_tfdfs():
   return sns.entry
 aggregate_tfdfs = _aggregate_tfdfs()
 
+class LitUtil:
+  def __init__(self):
+    self.row_cols = [
+      'filepath', 'line_number', 'symbol', 'event_kind', 'call_data', 'snoop_data'
+      ]
 
-def get_multiple_entry_code_data_mask(df):
-  m = (df['line_number'] == '655') & (df['filepath'] == 'YoutubeDL.py') & (df['event_kind'] == 'call')
-  new_df = df[m]
-  return new_df
+def _write_lit_file():
+  util = LitUtil()
+
+  def entry(df,tfdfpath):
+    df = df.copy()
+    writeable_string = compose_left(
+        iterate_over_rows,
+    )(df)
+    return tfdfpath
+
+  def iterate_over_rows(df):
+    for row in df.itertuples():
+      fmtd = format_line(row.filepath, row.line_number, row.call_data)
+    return mask
+
+  def format_line(filename,line_number,call_data):
+    rgx = re.compile(r"(?P<funcname>[A-z0-9_]+)\s?=\s?\((?P<funkargs>[A-z0-9_]+)\s?=\s?\(")
+    m = re.search(call_data)
+    funcname,args = gd = m.groupdict()
+    if not isinstance(call_data,FmtdCellData):
+
+      pass
+    else:
+      funcname = call_data.funcname
+      keys = call_data.get_keys
+      args = {k:call_data.get_arg(k) for k in keys}
+
+    fn = f'{Path(filename).stem:>10.10}' # len is 8 or 10 'd.__init__'
+    ln = f'{line_number:0>3}'
+    funk = call_data.funcname
+    args = call_data.get_arg('info_dict'),call_data.get_arg('params')
+    metadata = f"{fn}:{ln}"
+
+  sns = SimpleNamespace(entry=entry)
+  return sns.entry
+filter_line_events = _filter_line_events()
+
+write_lit_file = _write_lit_file()
+#   ewaf:032 aowejfiewofjaew({aopiwef=aewpfjwejfoewjj,
+#     apwiefj=;vseiowf
+#     aefawe=24rt23}
+# w2ewaf:032 aowejfiewofjaew({aopiwef=aewpfjwejfoewjj,
+#     apwiefj=;vseiowf
+#     aefawe=24rt23}
