@@ -1,0 +1,62 @@
+json
+      rgx = re.compile(r"(?P<indented_function>[^(]+)\((?P<argvars>.*)\)$",re.DOTALL)
+      rgxlhs = re.compile(r"(?P<whitespace>\s+)(?P<symbol>=\>)\s(?P<funk>[A-z_][A-z0-9-_]*)$")
+      rgxrhs = re.compile(r"(?P<argname>json_string)=(?P<rest>[^$]+)$")
+
+html
+    if "=>" in datum:
+      rgx = re.compile(r"(?P<indented_function>[^(]+)\((?P<argvars>.*)\)$",re.DOTALL)
+      rgxvb = re.compile(r"(?P<whitespace>\s+)(?P<symbol>=\>)\s(?P<funk>[A-z_][A-z0-9-_]*)$")
+    elif "<=" in datum:
+      rgx = re.compile(r"(?P<indented_function>[^:]+): (?P<argvars>[^$]+)$",re.DOTALL)
+      rgxvb = re.compile(r"(?P<whitespace>\s+)(?P<symbol>\<=)\s(?P<funk>[A-z_][A-z0-9-_]*)$")
+
+call
+    rgx = re.compile(r"(?P<indented_function>^\s*=\>\s[\<\>A-z0-9_-]+)\((?P<argvars>.*?)\)$",re.DOTALL)
+    rgxvb = re.compile(r"(?P<whitespace>\s+)(?P<symbol>=\>)\s(?P<funk>[<]?[A-z_][A-z0-9-_]*[>]?)$")
+
+return
+	rgx = re.compile(r"(?P<indented_function>^\s*\<=\s[<>A-z0-9_-]+):\s(?P<retvals>.*)$")
+
+exception
+	rgx = re.compile(r"(?P<indented_function>^\s*\s!\s[<>A-z0-9_-]+):\s\[(?P<retvals>[^]]+)\]$")
+
+
+
+      rgx = re.compile(r"(?P<indented_function>[^(]+)\((?P<argvars>.*)\)$",re.DOTALL)
+      rgxlhs = re.compile(r"(?P<whitespace>\s+)(?P<symbol>=\>)\s(?P<funk>[A-z_][A-z0-9-_]*)$")
+      rgxrhs = re.compile(r"(?P<argname>json_string)=(?P<rest>[^$]+)$")
+    if "=>" in datum:
+      rgx = re.compile(r"(?P<indented_function>[^(]+)\((?P<argvars>.*)\)$",re.DOTALL)
+      rgxvb = re.compile(r"(?P<whitespace>\s+)(?P<symbol>=\>)\s(?P<funk>[A-z_][A-z0-9-_]*)$")
+    elif "<=" in datum:
+      rgx = re.compile(r"(?P<indented_function>[^:]+): (?P<argvars>[^$]+)$",re.DOTALL)
+      rgxvb = re.compile(r"(?P<whitespace>\s+)(?P<symbol>\<=)\s(?P<funk>[A-z_][A-z0-9-_]*)$")
+    rgx = re.compile(r"(?P<indented_function>^\s*=\>\s[\<\>A-z0-9_-]+)\((?P<argvars>.*?)\)$",re.DOTALL)
+    rgxvb = re.compile(r"(?P<whitespace>\s+)(?P<symbol>=\>)\s(?P<funk>[<]?[A-z_][A-z0-9-_]*[>]?)$")
+	rgx = re.compile(r"(?P<indented_function>^\s*\<=\s[<>A-z0-9_-]+):\s(?P<retvals>.*)$")
+	rgx = re.compile(r"(?P<indented_function>^\s*\s!\s[<>A-z0-9_-]+):\s\[(?P<retvals>[^]]+)\]$")
+
+
+rgx = re.compile(r"(?P<indented_function>[^(]+)\((?P<argvars>.*)\)$",re.DOTALL)
+rgx = re.compile(r"(?P<indented_function>[^(]+)\((?P<argvars>.*)\)$",re.DOTALL)
+rgx = re.compile(r"(?P<indented_function>[^:]+): (?P<argvars>[^$]+)$",re.DOTALL)
+rgx = re.compile(r"(?P<indented_function>^\s*=\>\s[\<\>A-z0-9_-]+)\((?P<argvars>.*?)\)$",re.DOTALL)
+rgx = re.compile(r"(?P<indented_function>^\s*\<=\s[<>A-z0-9_-]+):\s(?P<retvals>.*)$")
+rgx = re.compile(r"(?P<indented_function>^\s*\s!\s[<>A-z0-9_-]+):\s\[(?P<retvals>[^]]+)\]$")
+
+
+rgx = re.compile(r"(?P<indented_function>[^(]+)\((?P<argvars>.*)\)$",re.DOTALL)
+rgx = re.compile(r"(?P<indented_function>[^:]+): (?P<argvars>[^$]+)$",re.DOTALL)
+rgx = re.compile(r"(?P<indented_function>^\s*=\>\s[\<\>A-z0-9_-]+)\((?P<argvars>.*?)\)$",re.DOTALL)
+rgx = re.compile(r"(?P<indented_function>^\s*\<=\s[<>A-z0-9_-]+):\s(?P<retvals>.*)$")
+rgx = re.compile(r"(?P<indented_function>^\s*\s!\s[<>A-z0-9_-]+):\s\[(?P<retvals>[^]]+)\]$")
+
+
+rgx = re.compile(r"(?P<indented_function>[^(]+) (?P<argvars>[^$]+)$",re.DOTALL)
+rgx = re.compile(r"(?P<indented_function>[^:]+): (?P<argvars>[^$]+)$",re.DOTALL)
+rgx = re.compile(r"(?P<indented_function>^\s]+): \[(?P<retvals>[^]]+)\]$")
+
+
+
+

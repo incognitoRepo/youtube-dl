@@ -15,7 +15,7 @@ from ..utils import (
     shell_quote,
     timeconvert,
 )
-import pysnooper
+
 
 class FileDownloader(object):
     """File Downloader class.
@@ -244,7 +244,7 @@ class FileDownloader(object):
                 clear_line = ('\r\x1b[K' if sys.stderr.isatty() else '\r')
             self.to_screen(clear_line + fullmsg, skip_eol=not is_last_line)
         self.to_console_title('youtube-dl ' + msg)
-    # @pysnooper.snoop('.../bin/top/report_progress.log')
+
     def report_progress(self, s):
         if s['status'] == 'finished':
             if self.params.get('noprogress', False):
@@ -325,7 +325,7 @@ class FileDownloader(object):
     def report_unable_to_resume(self):
         """Report it was impossible to resume download."""
         self.to_screen('[download] Unable to resume')
-    # @pysnooper.snoop('.../bin/top/download.log')
+
     def download(self, filename, info_dict):
         """Download to a filename using the info from info_dict
         Return True on success and False otherwise

@@ -7,7 +7,7 @@ from ..utils import (
     cli_configuration_args,
     encodeFilename,
 )
-import pysnooper
+
 
 class PostProcessor(object):
     """Post Processor class.

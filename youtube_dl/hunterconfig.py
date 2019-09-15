@@ -18,18 +18,18 @@ from dataclasses import dataclass, field, InitVar
 
 def event_dict(e):
   """e: event"""
-  code = {
-  'co_filename': e.frame.f_code.co_filename,
-  'co_name': e.frame.f_code.co_name,
-  }
-  frame = {
-  'f_lineno': e.frame.f_lineno,
-  'f_globals':  {
-      k:v
-      for k,v in e.frame.f_globals.items()
-      if k in ("__file__", "__name__")
-  },
-  # 'f_locals': e.frame.f_locals,
+  # code = {
+  # 'co_filename': e.frame.f_code.co_filename,
+  # 'co_name': e.frame.f_code.co_name,
+  # }
+  # frame = {
+  # 'f_lineno': e.frame.f_lineno,
+  # 'f_globals':  {
+  #     k:v
+  #     for k,v in e.frame.f_globals.items()
+  #     if k in ("__file__", "__name__")
+  # },
+  # # 'f_locals': e.frame.f_locals,
   'f_code': code,
   }
   d = {
@@ -193,18 +193,6 @@ class CustomPrinter(CallPrinter):
     self.evt_dcts = []
 
   def output_format(self, format_str, *args, **kwargs):
-    """
-    Write ``format_str.format(*args, **ANSI_COLORS, **kwargs)`` to ``self.stream``.
-
-    For ANSI coloring you can place these in the ``format_str``:
-
-    Args:
-      format_str: a PEP-3101 format string
-      *args:
-      **kwargs:
-
-    Returns: string
-    """
     output = (format_str.format(
       *args,
       **dict(self.other_colors, **kwargs)
@@ -221,10 +209,6 @@ class CustomPrinter(CallPrinter):
       return self.try_repr(event.locals.get(var, MISSING))
 
   def __call__(self, event):
-    """
-    Handle event and print filename, line number and source code. If event.kind is a `return` or `exception` also
-    prints values.
-    """
     ident = event.module, event.function
 
     thread = threading.current_thread()
@@ -405,19 +389,19 @@ class QueryConfig:
     base = self.basedir.joinpath('bin/agg.fullcall').absolute()
     base.mkdir(parents=True,exist_ok=True)
     actions = [
-      Cap4(stream=io.StringIO(),repr_limit=4096), # repr_limit=1024
+      CallPrinter(stream=io.StringIO(),repr_limit=4096), # repr_limit=1024
     ]
     outputs = [action.stream for action in actions]
     filenames = [base.joinpath(filename).absolute() for filename in ['call.fullcall.log']]
     assert len(filenames) == 1, filenames
     write_func = partial(self.write_func,outputs,filenames)
-    pkldf = partial(self.pickle_df,dfpath=base.joinpath('fcdf.pkl'))
+    epdf_pklpth = base.joinpath('epdf.pkl')
     query = And(
       Q(filename_contains="youtube",
             stdlib=True,
             actions=actions),
       ~Q(filename_contains="hunterconfig"))
-    c = QueryConfig.Config(query,actions,outputs,filenames,write_func,pkldf)
+    c = QueryConfig.Config(query,actions,outputs,filenames,write_func,epdf_pklpth)
     self.configs.append(c)
     return c
 

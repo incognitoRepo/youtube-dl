@@ -67,7 +67,7 @@ from .socks import (
     ProxyType,
     sockssocket,
 )
-import pysnooper
+
 
 def register_socks_protocols():
     # "Register" SOCKS protocols
@@ -2063,7 +2063,7 @@ def timeconvert(timestr):
         timestamp = email.utils.mktime_tz(timetuple)
     return timestamp
 
-# @pysnooper.snoop('../bin/top/sanitize_filename.log')
+
 def sanitize_filename(s, restricted=False, is_id=False):
     """Sanitizes a string so it could be used as part of a filename.
     If restricted is set, use a stricter subset of allowed characters.
@@ -2122,7 +2122,7 @@ def sanitize_path(s):
         sanitized_path.insert(0, drive_or_unc + os.path.sep)
     return os.path.join(*sanitized_path)
 
-# @pysnooper.snoop('../bin/top/sanitize_filename.log')
+
 def sanitize_url(url):
     # Prepend protocol-less URLs with `http:` scheme in order to mitigate
     # the number of unwanted failures due to missing protocol
@@ -2140,7 +2140,7 @@ def sanitize_url(url):
             return re.sub(mistake, fixup, url)
     return url
 
-# @pysnooper.snoop('../bin/top/sanitize_filename.log')
+
 def sanitized_Request(url, *args, **kwargs):
     return compat_urllib_request.Request(sanitize_url(url), *args, **kwargs)
 
@@ -2606,11 +2606,13 @@ class YoutubeDLHandler(compat_urllib_request.HTTPHandler):
         return req
 
     def http_response(self, req, resp):
+        print(f"util1a.\n{req=}\n{resp=}\n")
         old_resp = resp
         # gzip
         if resp.headers.get('Content-encoding', '') == 'gzip':
             content = resp.read()
             gz = gzip.GzipFile(fileobj=io.BytesIO(content), mode='rb')
+            print(f"util1b.\n{content=}\n{gz=}\n")
             try:
                 uncompressed = io.BytesIO(gz.read())
             except IOError as original_ioerror:
@@ -2620,6 +2622,7 @@ class YoutubeDLHandler(compat_urllib_request.HTTPHandler):
                     try:
                         gz = gzip.GzipFile(fileobj=io.BytesIO(content[:-i]), mode='rb')
                         uncompressed = io.BytesIO(gz.read())
+                        print(f"3. {io.BytesIO(content[:-i])=}\n{gz=}\n{uncompressed=}")
                     except IOError:
                         continue
                     break
@@ -2831,7 +2834,7 @@ def parse_iso8601(date_str, delimiter='T', timezone=None):
 def date_formats(day_first=True):
     return DATE_FORMATS_DAY_FIRST if day_first else DATE_FORMATS_MONTH_FIRST
 
-# @pysnooper.snoop('../bin/top/unified_strdate.log')
+
 def unified_strdate(date_str, day_first=True):
     """Return a string with the date in the format YYYYMMDD"""
 
@@ -3495,7 +3498,7 @@ class PUTRequest(compat_urllib_request.Request):
     def get_method(self):
         return 'PUT'
 
-# @pysnooper.snoop('../bin/top/int_or_none.log')
+
 def int_or_none(v, scale=1, default=None, get_attr=None, invscale=1):
     if get_attr:
         if v is not None:
@@ -3628,7 +3631,7 @@ def check_executable(exe, args=[]):
         return False
     return exe
 
-# @pysnooper.snoop('../bin/top/get_exe_version.log')
+
 def get_exe_version(exe, args=['--version'],
                     version_re=None, unrecognized='present'):
     """ Returns the version of the specified executable,
@@ -3768,7 +3771,7 @@ def escape_rfc3986(s):
         s = s.encode('utf-8')
     return compat_urllib_parse.quote(s, b"%/;:@&=+$,!~*'()?#[]")
 
-# @pysnooper.snoop('../bin/top/escape_url.log')
+
 def escape_url(url):
     """Escape URL as suggested by RFC 3986"""
     url_parsed = compat_urllib_parse_urlparse(url)
@@ -4182,7 +4185,7 @@ def is_html(first_bytes):
 
     return re.match(r'^\s*<', s)
 
-# @pysnooper.snoop('../bin/top/determine_protocol.log')
+
 def determine_protocol(info_dict):
     protocol = info_dict.get('protocol')
     if protocol is not None:
