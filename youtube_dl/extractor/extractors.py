@@ -1425,6 +1425,7 @@ from .xfileshare import XFileShareIE
 from .xhamster import (
     XHamsterIE,
     XHamsterEmbedIE,
+    XHamsterUserIE,
 )
 from .xiami import (
     XiamiSongIE,
@@ -1448,6 +1449,7 @@ from .yahoo import (
     YahooSearchIE,
     YahooGyaOPlayerIE,
     YahooGyaOIE,
+    YahooJapanNewsIE,
 )
 from .yandexdisk import YandexDiskIE
 from .yandexmusic import (
