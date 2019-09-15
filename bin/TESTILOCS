@@ -1,0 +1,10 @@
+filepath                                         yt_dl/common.py
+line_number                                                  667
+event_kind                                             call
+call_data      [                                    => _guess...
+og_index                                                   14571
+Name: 14571, dtype: object
+
+
+content_type, webpage_bytes
+try to convert the bytes to string

@@ -15,6 +15,7 @@ from IPython.core import ultratb
 sys.excepthook = ultratb.VerboseTB()
 
 rgxs = [
+  re.compile(r"(?P<indented_function>[^(]+) (?P<argvars>[^$]+)$",re.DOTALL),
   re.compile( # regular line
       r"(?P<home>yt_dl)/(?P<interpaths>(?:(?!\s{2}).)+[/]){0,2}(?P<filename>.*?py)"
       r":(?P<line_number>\d{1,5})\s+(?P<event_kind>[a-z][a-z\s]{8})\s" #{event:9} {COLOR}{data}
@@ -29,12 +30,12 @@ rgxs = [
       r")\s"
       r"(?P<source_data>[\s]*.+)$"
   ),
-  re.compile( # line continuation line
-      r"^\s*"
-      r"(?P<symbol>\[[.]{3}\])"
-      r"\s?"
-      r"(?P<source_data>[\s]*.+)$"
-  )
+  # re.compile( # line continuation line
+  #     r"^\s*"
+  #     r"(?P<symbol>\[[.]{3}\])"
+  #     r"\s?"
+  #     r"(?P<source_data>[\s]*.+)$"
+  # )
 ]
 
 def debug_regex(rgxlist,line,excinfo):
@@ -47,8 +48,6 @@ def debug_regex(rgxlist,line,excinfo):
 def dct4df(**kwds) -> Dict:
   got = lambda key: kwds.get(key,None)
   d = {
-    "home": got('home'),
-    "interpaths": got('interpaths'),
     "filename": got('filename'),
     "line_number": got('line_number'),
     "event_kind": got('event_kind'),
@@ -75,26 +74,39 @@ def _get_df_from_tracefile():
   def process_lines_for_df(filelines):
     assert len([elm for elm in filelines]) > 1, filelines
     processed_lines = []
+    first = True
     for line in filelines:
       if not line.strip():
         continue
       m1,m2,m3 = [rgx.search(line) for rgx in rgxs]
+      print(m1)
+      print(m2)
+      print(m3)
       if m1:
+        if first:
+          first = False
         gd1 = m1.groupdict()
-        dfdict = dct4df(**gd1)
+        dfdict = dct4df2(**gd1)
         processed_lines.append(dfdict)
+        print(f"{processed_lines=}")
       elif m2:
         gd2 = m2.groupdict()
-        dfdict = dct4df(**gd2)
-        prev_dfdict = processed_lines[-1]
-        prev_dfdict['source_data']+=dfdict['source_data']
-        prev_dfdict['symbol'].append(dfdict['symbol'])
+        dfdict = dct4df2(**gd2)
+        if first:
+          first = False
+        else:
+          prev_dfdict = processed_lines[-1]
+          prev_dfdict['source_data']+=dfdict['source_data']
+          prev_dfdict['symbol'].append(dfdict['symbol'])
       elif m3:
         gd3 = m3.groupdict()
-        dfdict = dct4df(**gd3)
-        prev_dfdict = processed_lines[-1]
-        prev_dfdict['source_data']+=dfdict['source_data']
-        prev_dfdict['symbol'].append(dfdict['symbol'])
+        dfdict = dct4df2(**gd3)
+        if first:
+          first = False
+        else:
+          prev_dfdict = processed_lines[-1]
+          prev_dfdict['source_data']+=dfdict['source_data']
+          prev_dfdict['symbol'].append(dfdict['symbol'])
       else:
         print(f"{vars()=}")
         debug_regex(rgxs,line,sys.exc_info())

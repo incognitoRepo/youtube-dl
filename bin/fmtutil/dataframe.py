@@ -4,12 +4,7 @@ import re,os
 import pandas as pd
 import numpy as np
 import itertools
-import importlib.util
-spec = importlib.util.spec_from_file_location("row", "/Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/bin/fmtutil/row.py")
-row = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(row)
-# sys.modules[module_name] = module
-
+from fmtutil.row.parse_verbose_argvars import ParsedTuple
 
 
 from pathlib import Path
@@ -490,6 +485,18 @@ class AggregateUtil:
     })
     return d
 
+  def base_dct_factory_call_only(self):
+    d = OrderedDict({
+        "home": None,
+        "interpaths": None,
+        "filename": None,
+        "line_number": None,
+        "symbol": None,
+        "event_kind": None,
+        "call_data": None,
+    })
+    return d
+
   def process_snoop_data(self, snp_dtacell):
     """snp_dtacell: List[Datum]
       Datum.split(':='): Mapping[str,StrWithBrackets]
@@ -515,9 +522,11 @@ class AggregateUtil:
 def _aggregate_aggdfs():
   util = AggregateUtil()
 
-  def entry(input_dfs,verbose=False):
-    # at this point we have 3 input_dfs
-    # rename data columns, merge into one df>to_dict,iterate_over_rows,
+  def entry(input_dfs,
+      columns=util.columns,
+      verbose=False
+      ):
+    util.columns = columns
     assert isinstance(input_dfs[0],pd.DataFrame) and len(input_dfs[0]) > 1, input_dfs
     aggdf = compose_left(
         rename_data_columns,
@@ -525,18 +534,25 @@ def _aggregate_aggdfs():
     )(input_dfs)
     if verbose:
       return aggdf
-    print(aggdf.columns)
-    assert all([col in aggdf.columns for col in util.columns]), aggdf.columns
-    return aggdf[["filepath","line_number","symbol","event_kind","call_data","code_data","snoop_data",]]
+    return aggdf[columns]
 
   def rename_data_columns(input_dfs):
     """
     ..input_dfs:: {calldf,codedf,snoopdf}
     ..returns  :: {"call":calldf,"code":codedf,"snoop":snoopdf}`
     """
+    source_columns = []
+    for elm in ('call','code','snoop'):
+      for col in util.columns:
+        if col.startswith(elm): source_columns.append(elm)
+        else: continue
     def rename(df,name): return df.rename(columns={"source_data":f"{name}_data"},inplace=False)
-    dct_o_renamed_dfs = {name:rename(df,name) for name,df in zip(["call","code","snoop"],input_dfs)}
-    assert all([(colname in df.columns and len(df) > 1) for colname,df in zip(["call_data","code_data","snoop_data"],dct_o_renamed_dfs.values())])
+    dct_o_renamed_dfs = {name:rename(df,name) for name,df in zip(source_columns,input_dfs)}
+    assert all([
+      (colname in df.columns and len(df) > 1)
+      for colname,df
+      in zip([f"{col}_data" for col in source_columns],dct_o_renamed_dfs.values())
+      ])
     return dct_o_renamed_dfs
 
   def merge_dfs_into_one(dct_o_renamed_dfs):
@@ -572,47 +588,58 @@ def _aggregate_aggdfs():
     lst_o_merged_rowdcts = []
     try:
       cadf,codf,sndf = [dct_o_rnd_dfs.get(k) for k in ("call","code","snoop")]
-      si,slen,sdone = 0, len(sndf), False
     except BaseException:
-      import IPython
-      from IPython.core.ultratb import ColorTB,VerboseTB
-      from inspect import getfile
-      print(getfile(IPython.core.ultratb))
-      print(ColorTB().text(*sys.exc_info()))
-    for i in range(len(cadf)):
-      base_dct = util.base_dct_factory()
-      car,cor,snr = cadf.iloc[i],codf.iloc[i],sndf.iloc[si]
-      assert (caln:=car.line_number) == (coln:=cor.line_number), f"{caln=},{coln=}"
-      cadata,codata = car.call_data,cor.code_data
-      if (not sdone and (snr.get('line_number',None) == caln)):
-        sndata = snr.snoop_data
-        assert isinstance(sndata,list) and isinstance(sndata[0],str), sndata[0]
-        # if len(sndata) > 1:
-        # st()
-        sdone,si = (end:=bool(si == slen)), (si if end else si + 1)
-      try:
-        base_dct.update({
-            "home": car.home,
-            "interpaths": car.interpaths,
-            "filename": car.filename,
-            "filepath": create_filepath(car.home,car.get('interpath',''),car.filename),
-            "line_number": car.line_number,
-            "event_kind": car.event_kind,
-            "symbol": [sym for sym in (getattr(car.symbol,'symbol',None),getattr(cor.symbol,'symbol',None))],
-            "call_data": colorize_lst([elm for elm in cadata]),
-            "code_data": colorize_lst([elm for elm in codata]),
-            # "snoop_data": colorize_lst([util.de_bracketize_snoop_data(elm) for elm in sndata]) if sndata else "<None>",
-            # "snoop_data": colorize_lst([elm for elm in sndata]),
-            # "snoop_data": colorize_lst([elm for elm in sndata]),
-            # "snoop_data": util.process_snoop_data(sndata)
-            # "snoop_data": [util.process_snoop_data(sndata)],
-            "snoop_data": sndata if sndata else "<None>",
-        })
-        lst_o_merged_rowdcts.append(base_dct)
-      except BaseException:
-        from IPython.core.ultratb import ColorTB,VerboseTB
-        print(ColorTB().text(*sys.exc_info()))
-    assert len(lst_o_merged_rowdcts) > 1, lst_o_merged_rowdcts
+      raise
+    if not (codf and sndf):
+      for i in range(len(cadf)):
+        base_dct = util.base_dct_factory_call_only()
+        car = cadf.iloc[i]
+        cadata = car.call_data
+        try:
+          base_dct.update({
+              "og_index": car.og_index,
+              "home": car.home,
+              "interpaths": car.interpaths,
+              "filename": car.filename,
+              "filepath": create_filepath(car.home,car.get('interpath',''),car.filename),
+              "line_number": car.line_number,
+              "event_kind": car.event_kind,
+              "symbol": [getattr(car.symbol,'symbol',None)],
+              "call_data": colorize_lst([elm for elm in cadata]),
+          })
+          lst_o_merged_rowdcts.append(base_dct)
+        except BaseException:
+          from IPython.core.ultratb import ColorTB,VerboseTB
+          print(ColorTB().text(*sys.exc_info()))
+          raise
+    else:
+      si,slen,sdone = 0, len(sndf), False
+      for i in range(len(cadf)):
+        base_dct = util.base_dct_factory()
+        car,cor,snr = cadf.iloc[i],codf.iloc[i],sndf.iloc[si]
+        assert (caln:=car.line_number) == (coln:=cor.line_number), f"{caln=},{coln=}"
+        cadata,codata = car.call_data,cor.code_data
+        if (not sdone and (snr.get('line_number',None) == caln)):
+          sndata = snr.snoop_data
+          assert isinstance(sndata,list) and isinstance(sndata[0],str), sndata[0]
+          sdone,si = (end:=bool(si == slen)), (si if end else si + 1)
+        try:
+          base_dct.update({
+              "home": car.home,
+              "interpaths": car.interpaths,
+              "filename": car.filename,
+              "filepath": create_filepath(car.home,car.get('interpath',''),car.filename),
+              "line_number": car.line_number,
+              "event_kind": car.event_kind,
+              "symbol": [sym for sym in (getattr(car.symbol,'symbol',None),getattr(cor.symbol,'symbol',None))],
+              "call_data": colorize_lst([elm for elm in cadata]),
+              "code_data": colorize_lst([elm for elm in codata]),
+              "snoop_data": sndata if sndata else "<None>",
+          })
+          lst_o_merged_rowdcts.append(base_dct)
+        except BaseException:
+          from IPython.core.ultratb import ColorTB,VerboseTB
+          print(ColorTB().text(*sys.exc_info()))
     return lst_o_merged_rowdcts
 
   def aggregate_lst_o_merged_rowdcts(merged_rowdcts):
@@ -676,7 +703,6 @@ def _aggregate_tfdfs():
     )(input_dfs)
     if verbose:
       return tfdf
-    print(tfdf.columns)
     assert all([col in tfdf.columns for col in util.columns]), tfdf.columns
     return tfdf[["filepath","line_number","symbol","event_kind","call_data","snoop_data",]]
 
@@ -779,16 +805,30 @@ def _write_lit_file():
     writeable_string = compose_left(
         iterate_over_rows,
     )(df)
-    return tfdfpath
+    return writeable_string
 
   def iterate_over_rows(df):
     for row in df.itertuples():
-      fmtd = format_line(row.filepath, row.line_number, row.call_data)
-    return mask
+      # fmtd = format_line(row.filepath, row.line_number, row.call_data)
+      try: filepath,lineno,call_data = row.filepath,row.line_number,row.call_data
+      except: st()
+      if isinstance(call_data, ParsedTuple):
+        call_data = str(call_data)
+      elif isinstance(call_data, tuple):
+        if isinstance(call_data[0], ParsedTuple):
+          call_data = tuple([str(cd) for cd in call_data])
+        elif call_data[1]:
+          call_data = ": ".join(call_data)
+        else:
+          call_data = call_data[0]
+      fmtd = f"{filepath},{lineno},{call_data}"
+    return fmtd
 
   def format_line(filename,line_number,call_data):
+    # if len(call_data) < 2000:
     rgx = re.compile(r"(?P<funcname>[A-z0-9_]+)\s?=\s?\((?P<funkargs>[A-z0-9_]+)\s?=\s?\(")
-    m = re.search(call_data)
+    try: m = rgx.search(": ".join(call_data))
+    except: st()
     funcname,args = gd = m.groupdict()
     if not isinstance(call_data,FmtdCellData):
 
@@ -809,9 +849,3 @@ def _write_lit_file():
 filter_line_events = _filter_line_events()
 
 write_lit_file = _write_lit_file()
-#   ewaf:032 aowejfiewofjaew({aopiwef=aewpfjwejfoewjj,
-#     apwiefj=;vseiowf
-#     aefawe=24rt23}
-# w2ewaf:032 aowejfiewofjaew({aopiwef=aewpfjwejfoewjj,
-#     apwiefj=;vseiowf
-#     aefawe=24rt23}
