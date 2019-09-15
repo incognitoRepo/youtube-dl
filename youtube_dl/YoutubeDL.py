@@ -110,9 +110,10 @@ from .version import __version__
 
 if compat_os_name == 'nt':
     import ctypes
-
+import pysnooper
 
 class YoutubeDL(object):
+    #region DocString
     """YoutubeDL class.
 
     YoutubeDL objects are the ones responsible of downloading the
@@ -320,7 +321,7 @@ class YoutubeDL(object):
                         You can reduce network I/O by disabling it if you don't
                         care about DASH.
     """
-
+    #endregion
     _NUMERIC_FIELDS = set((
         'width', 'height', 'tbr', 'abr', 'asr', 'vbr', 'fps', 'filesize', 'filesize_approx',
         'timestamp', 'upload_year', 'upload_month', 'upload_day',
@@ -448,7 +449,7 @@ class YoutubeDL(object):
                 'Long argument string detected. '
                 'Use -- to separate parameters and URLs, like this:\n%s\n' %
                 args_to_str(correct_argv))
-
+    # @pysnooper.snoop('../bin/top/add_info_extractor.log')
     def add_info_extractor(self, ie):
         """Add an InfoExtractor object to the end of the list."""
         self._ies.append(ie)
@@ -468,6 +469,7 @@ class YoutubeDL(object):
             self.add_info_extractor(ie)
         return ie
 
+    # @pysnooper.snoop('../bin/top/add_default_info_extractors.log')
     def add_default_info_extractors(self):
         """
         Add the InfoExtractors returned by gen_extractors to the end of the list
@@ -629,7 +631,7 @@ class YoutubeDL(object):
             self.to_screen('[download] %s has already been downloaded' % file_name)
         except UnicodeEncodeError:
             self.to_screen('[download] The file has already been downloaded')
-
+    # @pysnooper.snoop('../bin/top/prepare_filename.log')
     def prepare_filename(self, info_dict):
         """Generate the output filename."""
         try:
@@ -766,7 +768,7 @@ class YoutubeDL(object):
         '''Set the keys from extra_info in info dict if they are missing'''
         for key, value in extra_info.items():
             info_dict.setdefault(key, value)
-
+    # @pysnooper.snoop('../bin/top/extract_info.log')
     def extract_info(self, url, download=True, ie_key=None, extra_info={},
                      process=True, force_generic_extractor=False):
         '''
@@ -1118,7 +1120,7 @@ class YoutubeDL(object):
         if prefer_best():
             req_format_list.reverse()
         return '/'.join(req_format_list)
-
+    # @pysnooper.snoop('../bin/top/build_format_selector.log')
     def build_format_selector(self, format_spec):
         def syntax_error(note, start):
             message = (
@@ -1406,7 +1408,7 @@ class YoutubeDL(object):
         pr = sanitized_Request(info_dict['url'])
         self.cookiejar.add_cookie_header(pr)
         return pr.get_header('Cookie')
-
+    # @pysnooper.snoop('../bin/top/process_video_result.log')
     def process_video_result(self, info_dict, download=True):
         assert info_dict.get('_type', 'video') == 'video'
 

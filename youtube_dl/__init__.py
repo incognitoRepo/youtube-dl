@@ -44,7 +44,7 @@ from .extractor import gen_extractors, list_extractors
 from .extractor.adobepass import MSO_INFO
 from .YoutubeDL import YoutubeDL
 from pdb import set_trace as st
-
+import pysnooper
 
 def _real_main(argv=None):
   # Compatibility fixes for Windows
@@ -472,18 +472,13 @@ def _real_main(argv=None):
 
 
 def main(argv=None):
-  print(argv)
   try:
-    print(1)
     _real_main(argv)
   except DownloadError:
-    print(2)
     sys.exit(1)
   except SameFileError:
-    print(3)
     sys.exit('ERROR: fixed output name but more than one file to download')
   except KeyboardInterrupt:
-    print(4)
     sys.exit('\nERROR: Interrupted by user')
 
 

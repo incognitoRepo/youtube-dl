@@ -19,7 +19,7 @@ from .utils import (
 )
 from .version import __version__
 from pdb import set_trace as st
-
+import pysnooper
 def _hide_login_info(opts):
     PRIVATE_OPTS = set(['-p', '--password', '-u', '--username', '--video-password', '--ap-password', '--ap-username'])
     eqre = re.compile('^(?P<key>' + ('|'.join(re.escape(po) for po in PRIVATE_OPTS)) + ')=.+$')
@@ -37,7 +37,7 @@ def _hide_login_info(opts):
             opts[idx + 1] = 'PRIVATE'
     return opts
 
-
+# @pysnooper.snoop('../bin/top/parseOpts.log')
 def parseOpts(overrideArguments=None):
     def _readOptions(filename_bytes, default=[]):
         try:

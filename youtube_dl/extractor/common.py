@@ -80,7 +80,7 @@ from ..utils import (
     xpath_text,
     xpath_with_ns,
 )
-
+import pysnooper
 
 class InfoExtractor(object):
     """Information Extractor class.
