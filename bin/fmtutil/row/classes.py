@@ -5,7 +5,9 @@ from pathlib import Path
 from itertools import repeat
 from collections.abc import MutableMapping
 from collections import UserList, UserString
-from typing import NamedTuple, List, Dict
+from typing import NamedTuple, List, Dict, Iterable, Union
+from youtube_dl.hunterconfig import CallEvent,LineEvent,ReturnEvent,ExceptionEvent
+import pandas as pd
 from dataclasses import dataclass, InitVar, field
 from textwrap import TextWrapper
 from pdb import set_trace as st
@@ -13,6 +15,76 @@ from prettyprinter import cpprint, pprint
 from pygments import highlight
 from pygments.lexers import PythonLexer
 from pygments.formatters import Terminal256Formatter
+
+EventKinds = Union[CallEvent,LineEvent,ReturnEvent,ExceptionEvent]
+
+@dataclass
+class DataCollections:
+  evt_dcts: InitVar
+  df_dcts: pd.DataFrame = field(init=False)
+  # dcts_grpd
+
+  evts: List[EventKinds] = field(init=False)
+  df_evts: pd.DataFrame = field(init=False)
+  evts_grpd: Dict[str,List[EventKinds]] = field(init=False)
+
+  def __post_init__(self, evt_dcts):
+    """action.get_evt_dcts()"""
+    self.evt_dcts = evt_dcts
+    self.df_dcts = pd.DataFrame(evt_dcts)
+
+    self.evts = [e['hunter_event'] for e in evt_dcts]
+    self.df_evts = pd.DataFrame([e.__dict__ for e in self.evts])
+
+    self.create_df_evts(self.evts)
+    self.group_by_evt_kind(self.evts)
+
+  def create_df_evts(self,evts):
+    """evts[0].__dataclass_fields__.keys()"""
+    lods = []
+    for e in evts:
+      d = e.__dict__
+      d.update({'hunter_monostr':str(e)})
+      lods.append(d)
+    df = pd.DataFrame(lods)
+    self.df_evts = df
+
+  def group_by_evt_kind(self,evts):
+    cll_lst,lne_lst,ret_lst,exc_lst = [],[],[],[]
+    d = {
+      "CallEvent": cll_lst,
+      "LineEvent": lne_lst,
+      "ReturnEvent": ret_lst,
+      "ExceptionEvent": exc_lst,
+    }
+    for e in evts:
+      d[type(e).__name__].append(e)
+    self.evts_grpd = d
+
+  def __str__(self):
+    self.evts
+    s0 = (
+      f" ..evt_dcts: List[Dict] (len={len(self.evt_dcts)})",
+      f"      :keys: ",
+      f"({', '.join(list(self.evt_dcts[0].__dict__.keys()))})"
+    )
+    s2 = (
+      f"     ..evts: List[EventKinds] (len={len(self.df_dcts)})",
+      f":EventKinds: Union[CallEvent,LineEvent,ReturnEvent,ExceptionEvent]",
+      f"      :keys: ",
+      f"({', '.join(list(self.evts[0].__dict__.keys()))})"
+    )
+    s1 = (
+      f"  ..df_dcts: pd.DataFrame (len={len(self.df_dcts)})",
+      f"   :columns: ",
+      f"{self.df_dcts.columns}"
+    )
+    s3 = (
+      f"  ..df_evts: pd.DataFrame (len={len(self.df_evts)})",
+      f"   :columns: ",
+      f"{self.df_evts.columns}"
+    )
+
 
 class Parsed:
   def clrz(self, s,t):

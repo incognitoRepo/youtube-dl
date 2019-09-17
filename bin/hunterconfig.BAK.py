@@ -1,1 +1,0 @@
-/Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/hunterconfig.py

@@ -774,17 +774,9 @@ def _write_file():
 write_file = _write_file()
 
 if __name__ == "__main__":
-  # load_aggdf = True
-  # load_tfdf = False
-  load_fcdf = True
-  # if load_aggdf: aggdf = agg_main()
+  load_epdf = True
 
-  # loadidf,whichload = True,"short_tfdf"
-  # whichdf = "idf_w_lines"
-  # idf2, cds = load_idf(loadidf,whichload,whichdf)
-  # write_idf_file(idf2,list(cds))
-
-  if load_fcdf:
+  if load_epdf:
     lwr = evtpkls_main()
     c,nc = lwr
 
