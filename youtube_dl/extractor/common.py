@@ -624,7 +624,6 @@ class InfoExtractor(object):
             if data is not None or headers:
                 url_or_request = sanitized_Request(url_or_request, data, headers)
         try:
-            print(f"{url_or_request=}")
             return self._downloader.urlopen(url_or_request)
         except (compat_urllib_error.URLError, compat_http_client.HTTPException, socket.error) as err:
             if isinstance(err, compat_urllib_error.HTTPError):

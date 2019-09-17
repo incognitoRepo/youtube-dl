@@ -2226,7 +2226,6 @@ class YoutubeDL(object):
         """ Start an HTTP download """
         if isinstance(req, compat_basestring):
             req = sanitized_Request(req)
-        print(f"{req=}")
         return self._opener.open(req, timeout=self._socket_timeout)
 
     def print_debug_header(self):

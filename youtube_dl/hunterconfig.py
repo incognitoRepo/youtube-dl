@@ -1,7 +1,9 @@
+#// vscode-fold=1
 import hunter
 import re
 import os
-from typing import List, Dict, Iterable
+from functools import singledispatchmethod
+from typing import List, Dict, Iterable, Union
 from hunter import Q, Query
 from hunter.predicates import And, When
 from hunter.actions import CallPrinter, CodePrinter, VarsPrinter, VarsSnooper, CALL_COLORS, MISSING
@@ -10,48 +12,13 @@ from collections import namedtuple, defaultdict
 from functools import partial
 from fsplit.filesplit import FileSplit
 from pathlib import Path
+from tblib import Traceback
 import pandas as pd
 import pickle, sys
+import traceback
 from enum import Enum
 from pdb import set_trace as st
 from dataclasses import dataclass, field, InitVar
-
-def event_dict(e):
-  """e: event"""
-  # code = {
-  # 'co_filename': e.frame.f_code.co_filename,
-  # 'co_name': e.frame.f_code.co_name,
-  # }
-  # frame = {
-  # 'f_lineno': e.frame.f_lineno,
-  # 'f_globals':  {
-  #     k:v
-  #     for k,v in e.frame.f_globals.items()
-  #     if k in ("__file__", "__name__")
-  # },
-  # # 'f_locals': e.frame.f_locals,
-  'f_code': code,
-  }
-  d = {
-  # 'arg':e.arg,
-  'calls':e.calls,
-  # 'code':code,
-  'depth':e.depth,
-  # 'detach':e.detach,
-  # 'detached':e.detached,
-  'filename':e.filename,
-  # 'frame':frame,
-  'fullsource':e.fullsource,
-  'function':e.function,
-  # 'function_object':e.function_object,
-  # 'globals':frame['f_globals'],
-  'kind':e.kind,
-  'lineno':e.lineno,
-  # 'locals':e.locals,
-  'module':e.module,
-  'source':e.source
-  }
-  return d
 
 @dataclass
 class EventKind:
@@ -60,35 +27,50 @@ class EventKind:
   event_function: str = field(init=False)
   filename_prefix: str
   stack: int
+  argvars: Dict = field(default_factory=dict)
+
+  def get_argvars(self,event):
+    """event.arg from sys.settrace(tracefunc)
+    ..call: `None`
+    ..line: `None`
+    ..return: `retval` or `None` (if exc)
+    ..exception: `(exception, value, traceback)`
+               : `(type, value, traceback)`
+               : `(exception_class, instance, traceback)`
+    """
+    raise NotImplementedError("setup the dispatch")
 
   def __post_init__(self, event):
+    d = {'call': self.get_argvars, 'line': lambda e: e.fullsource,
+    'return': self.get_argvars, 'exception': self.get_argvars}
     self.event_kind = event.kind
     self.event_function = str(event.function)
+    self.argvars = d[event.kind](event)
 
 @dataclass
 class CallEvent(EventKind):
   symbol: str = "=>"
   separator: str = "   "
-  event_function: str = field(init=False)
-  varnames: List[str] = field(default_factory=list)
-  argvars: Dict = field(default_factory=dict)
 
-  def __post_init__(self, event):
-    super().__post_init__(event)
-    for var in event.code.co_varnames[:event.code.co_argcount]:
-        self.varnames.append(var)
-    self.event_function = event.function
-    for var in self.varnames:
+  def get_argvars(self,event):
+    varnames = event.code.co_varnames
+    argcount = event.code.co_argcount
+    avs = {}
+    for var in varnames:
       try:
         val = str(event.locals.get(var))
+      except AttributeError:
+        val = repr(event.locals.get(var))
       except:
-        val = var
-      self.argvars.update({var:val})
+        val = 'error'
+      avs.update({var:val})
+    self.argvars = avs
+    return
 
   def __str__(self):
     s = (
         f"{self.filename_prefix}{self.event_kind:9} "
-        f"{self.separator}{self.symbol} "
+        f"{self.separator * (len(self.stack) - 1)}{self.symbol} "
         f"{self.event_function}({self.argvars})"
     )
     return s
@@ -97,25 +79,27 @@ class CallEvent(EventKind):
 class ExceptionEvent(EventKind):
   symbol: str = " !"
   separator: str = "   "
-  varnames: List[str] = field(default_factory=list)
-  arg: str = field(init=False)
 
-  def __post_init__(self, event):
-    super().__post_init__(event)
-    if event.arg and isinstance(event.arg,Iterable):
-      try:
-        self.arg = {k:str(v) for k,v in event.arg}
-      except:
-        self.arg = "shouldnt have passed"
-    else:
-      self.arg = ""
+  def get_argvars(self,event):
+    """event.arg from sys.settrace(tracefunc)
+    ..exception: `(exception, value, traceback)`
+               : `(type, value, traceback)`
+               : `(exception_class, instance, traceback)`
+    """
+    d = {
+      "exception": event.arg[0],
+      "value": event.arg[1],
+      "traceback": event.arg[2]
+    }
+    self.argvars = d
+    return
 
   def __str__(self):
     s = (
       f"{self.filename_prefix}{self.event_kind:9} "
       f"{self.separator * (len(self.stack) - 1)} "
       f"{self.event_function}: "
-      f"{self.arg}\n"
+      f"{self.argvars}\n"
     )
     return s
 
@@ -123,23 +107,38 @@ class ExceptionEvent(EventKind):
 class ReturnEvent(EventKind):
   symbol: str = "<="
   separator: str = "   "
-  event_arg: str = field(init=False)
 
-  def __post_init__(self, event):
-    super().__post_init__(event)
-    if event.arg and isinstance(event.arg,Iterable):
+  def get_argvars(self,event):
+    """event.arg from sys.settrace(tracefunc)
+    ..return: `retval` or `None` (if exc)
+    """
+    if not event.arg:
+      self.argvars = None
+    elif isinstance(event.arg,str):
       try:
-        self.arg = {k:str(v) for k,v in event.arg}
+        self.argvars = str(event.arg)
       except:
-        self.arg = str(event.arg)
+        self.argvars = repr(event.arg)
+    elif isinstance(event.arg,Iterable):
+      if isinstance(event.arg,Dict):
+        try:
+          self.argvars = {k:str(v) for k,v in event.arg}
+        except:
+          self.argvars = {k:repr(v) for k,v in event.arg}
+      elif isinstance(event.arg,List):
+        try:
+          self.argvars = [str(elm) for elm in event.arg]
+        except:
+          self.argvars = [repr(elm) for elm in event.arg]
     else:
-      self.arg = ""
+      self.argvars = "else"
+    return
 
   def __str__(self):
     s = (
       f"{self.filename_prefix}{self.event_kind:9} "
-      f"{self.separator  * (len(stack) - 1)}{self.symbol} "
-      f"{self.event_function}: {self.event_arg}\n"
+      f"{self.separator  * (len(self.stack) - 1)}{self.symbol} "
+      f"{self.event_function}: {self.argvars}\n"
     )
     return s
 
@@ -147,17 +146,17 @@ class ReturnEvent(EventKind):
 class LineEvent(EventKind):
   symbol: str = "<="
   separator: str = "   "
-  source: str = field(init=False)
 
-  def __post_init__(self, event):
-    super().__post_init__(event)
-    self.source = event.fullsource
+  def get_argvars(self, event):
+    sauce = str(event.fullsource)
+    self.argvars = sauce
+    return
 
   def __str__(self):
     s = (
       f"{self.filename_prefix}{self.event_kind:9} "
       f"{self.separator * len(self.stack)}"
-      f"{self.source.strip()}\n"
+      f"{self.argvars}\n"
     )
     return s
 
@@ -166,7 +165,8 @@ def update_evt_dct(evt_dct, event, filename_prefix, stack, output):
   'return': ReturnEvent, 'exception': ExceptionEvent}
   hntr_evt = d[event.kind](event,filename_prefix,stack)
   evt_dct['hunter_event'] = hntr_evt
-  evt_dct['hunter_string'] = output
+  evt_dct['hunter_monostr'] = str(hntr_evt)
+  evt_dct['hunter_polystr'] = output
   return evt_dct
 
 class CustomPrinter(CallPrinter):
@@ -189,8 +189,21 @@ class CustomPrinter(CallPrinter):
   def __init__(self, *args, **kwargs):
     super(CustomPrinter, self).__init__(*args, **kwargs)
     self.locals = defaultdict(list)
-    self.count = 0
+    self.count = count(0)
     self.evt_dcts = []
+
+  def filename_prefix(self, event=None):
+    if event:
+      filename = Path(event.filename) or '<???>'
+      if filename.stem == "init":
+        filename2 = f"{filename.parent.stem[0]}{filename.stem}"
+      else:
+        filename2 = f"{filename.stem}"
+      filename3 = filename2[:self.filename_alignment]
+      return '{:>{}}{COLON}:{LINENO}{:<5} '.format(
+        filename3, self.filename_alignment, event.lineno, **self.other_colors)
+    else:
+      return '{:>{}}       '.format('', self.filename_alignment)
 
   def output_format(self, format_str, *args, **kwargs):
     output = (format_str.format(
@@ -208,17 +221,48 @@ class CustomPrinter(CallPrinter):
     else:
       return self.try_repr(event.locals.get(var, MISSING))
 
+  def get_evt_dcts(self):
+    self_id = id(self)
+    return self.evt_dcts
+
+  def event_dict(self,e,count):
+    """e: event"""
+    d = {
+    'arg':e.arg,
+    'calls':e.calls,
+    'count':count,
+    # 'code':e.code,
+    'depth':e.depth,
+    # 'detach':e.detach,
+    # 'detached':e.detached,
+    'filename':e.filename,
+    # 'frame':frame,
+    'fullsource':e.fullsource,
+    'function':e.function,
+    # 'function_object':e.function_object,
+    # 'globals':frame['f_globals'],
+    'kind':e.kind,
+    'lineno':e.lineno,
+    # 'locals':e.locals,
+    'module':e.module,
+    'source':e.source
+    }
+    return d
+
   def __call__(self, event):
+    live_event = event
+    event = event.detach(value_filter=lambda value: self.try_repr(value))
     ident = event.module, event.function
 
     thread = threading.current_thread()
     stack = self.locals[thread.ident]
 
     pid_prefix = self.pid_prefix()
-    thread_prefix = self.thread_prefix(event)
-    filename_prefix = self.filename_prefix(event)
-    evt_dct = event_dict(event)
+    thread_prefix = self.thread_prefix(live_event)
+    filename_prefix = self.filename_prefix(live_event)
+    evt_dct = self.event_dict(event,next(self.count))
     if event.kind == 'call':
+      # :event.arg: None = None
       code = event.code
       stack.append(ident)
       output = self.output_format(
@@ -236,10 +280,11 @@ class CustomPrinter(CallPrinter):
         ) for var in code.co_varnames[:code.co_argcount]),
         COLOR=self.event_colors.get(event.kind),
       )
-      evt_dct = update_evt_dct(evt_dct, event, filename_prefix, stack, output)
+      evt_dct = update_evt_dct(evt_dct,event,filename_prefix,stack,output)
       self.evt_dcts.append(evt_dct)
       self.write_output(output)
     elif event.kind == 'exception':
+      # :event.arg: tuple = (exception, value, traceback)
       output = self.output_format(
         '{}{}{}{KIND}{:9} {}{COLOR} !{NORMAL} {}: {RESET}{}\n',
         pid_prefix,
@@ -256,6 +301,7 @@ class CustomPrinter(CallPrinter):
       self.write_output(output)
 
     elif event.kind == 'return':
+      # :event.arg: = return value or `None` if exception
       output = self.output_format(
         '{}{}{}{KIND}{:9} {}{COLOR}<={NORMAL} {}: {RESET}{}\n',
         pid_prefix,
@@ -273,6 +319,7 @@ class CustomPrinter(CallPrinter):
       if stack and stack[-1] == ident:
         stack.pop()
     else:
+      # :event.arg: = `None`
       output = self.output_format(
         '{}{}{}{KIND}{:9} {RESET}{}{}{RESET}\n',
         pid_prefix,
@@ -301,6 +348,8 @@ def patched_filename_prefix2(self, event=None):
         filename, self.filename_alignment, event.lineno, **self.other_colors)
   else:
    return '{:>{}}       '.format('', self.filename_alignment)
+
+
 
 def safe_deep_repr(obj, maxdepth=10):
   if not maxdepth:
@@ -405,12 +454,12 @@ class QueryConfig:
     self.configs.append(c)
     return c
 
-
   def eventpickle(self):
     base = self.basedir.joinpath('bin/eventpickle').absolute()
     base.mkdir(parents=True,exist_ok=True)
     actions = [
-      CustomPrinter(stream=io.StringIO(),repr_limit=4096), # repr_limit=1024
+      # CustomPrinter(stream=io.StringIO(),repr_limit=4096), # repr_limit=1024
+      CustomPrinter(repr_limit=4096), # repr_limit=1024
     ]
     outputs = [action.stream for action in actions]
     filenames = [base.joinpath(filename).absolute() for filename in ['call.eventpickle.log']]

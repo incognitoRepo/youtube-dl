@@ -2606,13 +2606,11 @@ class YoutubeDLHandler(compat_urllib_request.HTTPHandler):
         return req
 
     def http_response(self, req, resp):
-        print(f"util1a.\n{req=}\n{resp=}\n")
         old_resp = resp
         # gzip
         if resp.headers.get('Content-encoding', '') == 'gzip':
             content = resp.read()
             gz = gzip.GzipFile(fileobj=io.BytesIO(content), mode='rb')
-            print(f"util1b.\n{content=}\n{gz=}\n")
             try:
                 uncompressed = io.BytesIO(gz.read())
             except IOError as original_ioerror:
