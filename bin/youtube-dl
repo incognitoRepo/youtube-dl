@@ -15,7 +15,7 @@ if __name__ == '__main__':
     qc = QueryConfig()
     qcfg = [qc.eventpickle()]#,qc.noloop()]
     tracer = Tracer()
-    for query,actions,outputs,filenames,write_func,epdf_pklpth in qcfg:
+    for query,actions,outputs,filenames,write_func,evtdcts_pklpth in qcfg:
       tracer.trace(query)
       youtube_dl.main()
       write_func()

@@ -10,14 +10,12 @@ stackprinter.set_excepthook(
   show_vals='like_source',
   truncate_vals=500)
 
-
-
-
-with open('/Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/bin/evts.pkl','rb') as f:
+with open('/Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/bin/eventpickle/evtdcts_pklpth.pkl','rb') as f:
   evt_dcts = pickle.load(f)
 
-e0,e1,e2 = evts_dcts[:3]
-dc = DataCollections(evts_dcts)
+e0,e1,e2 = evt_dcts[:3]
+dc = DataCollections(evt_dcts)
+epdf, evts, evts_df = dc.evt_dcts_df, dc.evts, dc.evts_df
 
 """
  style: string

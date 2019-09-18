@@ -36,7 +36,8 @@ from fmtutil.row.classes import (
   SimpleFunkWithArgs, VerboseList,
   ParsedTuple, LineEvent,
   ParsedHTML, ParsedJSON,
-  FormatSymbols, MutableStr
+  FormatSymbols, MutableStr,
+  DataCollections
   )
 import stackprinter
 import dill as pickle
@@ -177,18 +178,21 @@ def _evtpkls_main():
   util = EventPicklesUtil()
 
   def entry():
-    query,actions,outputs,filenames,write_func,epdf_pklpth = qcfg = QueryConfig().eventpickle()
-    dfs = {}
-    if not epdf_pklpth.exists():
-      epdf = util.make_datafarme_from_evts()
-      epdf.to_pickle(epdf_pklpth)
-    else:
-      epdf = pd.read_pickle(epdf_pklpth)
-    fcdf = fcdf[:30]  #!! RIGHT HERE
-    # if TRUNC: fcdf = fcdf[trunc_start:trunc_end]
-    columns = ["filepath","line_number","event_kind","call_data","og_index"]
-    fcdf_agg = fud.aggregate_aggdfs([fcdf],columns=columns)
-    cds = call_data_series = fcdf_agg.apply(process_row,axis=1)
+    query,actions,outputs,filenames,write_func,evtdcts_pklpth = qcfg = QueryConfig().eventpickle()
+    with open(evtdcts_pklpth,'rb') as f:
+      evt_dcts = pickle.load(f)
+    dc = DataCollections(evt_dcts)
+    epdf, evts, evts_df = dc.evt_dcts_df, dc.evts, dc.evts_df
+    epdf = epdf[:30]  #!! RIGHT HERE = = =   = = =   = = =   = = =   = = =   = = =   = = =   = = =   = = =   = = =   = = =
+    # if TRUNC: epdf = epdf[trunc_start:trunc_end]
+    epdf = epdf.rename_axis('og_index').reset_index()
+    columns = [
+      'og_index', 'arg', 'calls', 'count', 'depth', 'filename', 'fullsource',
+      'function', 'hunter_event', 'hunter_monostr', 'hunter_polystr', 'kind',
+      'lineno', 'module', 'source'
+      ]
+    epdf_agg = fud.aggregate_aggdfs([epdf],columns=columns)
+    cds = call_data_series = epdf_agg.apply(process_row,axis=1)
     cdl = call_data_lst = [SimpleFunkWithArgs(cd)
                            if not (
         isinstance(cd,LineEvent)
@@ -198,17 +202,17 @@ def _evtpkls_main():
         or isinstance(cd[0], ParsedTuple)
     )
         else cd for cd in call_data_series]
-    fcdf_agg.call_data = call_data_lst
-    lwr = lst_w_regions = add_regions(fcdf_agg)
+    epdf_agg.call_data = call_data_lst
+    lwr = lst_w_regions = add_regions(epdf_agg)
     lwr_df = pd.DataFrame(lwr)
     wpath = util.homepath.joinpath('bin/lwr')
-    lwr2 = write_file(df=fcdf_agg,lst_w_regions=lwr,writepath=wpath)
+    lwr2 = write_file(df=epdf_agg,lst_w_regions=lwr,writepath=wpath)
     return lwr2
 
-  def add_regions(fcdf):
+  def add_regions(epdf):
     prwi = False  # prwi: prev row was init
     output_lines = []
-    itrlst = list(fcdf.itertuples())
+    itrlst = list(epdf.itertuples())
     i,end = 0,len(itrlst)
     while i < end:
       # print(f"{i=}")
@@ -780,5 +784,5 @@ if __name__ == "__main__":
     lwr = evtpkls_main()
     c,nc = lwr
 
-  # print(fcdf.head())
-  # print("\n".join(fcdf))
+  # print(epdf.head())
+  # print("\n".join(epdf))

@@ -21,25 +21,25 @@ EventKinds = Union[CallEvent,LineEvent,ReturnEvent,ExceptionEvent]
 @dataclass
 class DataCollections:
   evt_dcts: InitVar
-  df_dcts: pd.DataFrame = field(init=False)
+  evt_dcts_df: pd.DataFrame = field(init=False)
   # dcts_grpd
 
   evts: List[EventKinds] = field(init=False)
-  df_evts: pd.DataFrame = field(init=False)
+  evts_df: pd.DataFrame = field(init=False)
   evts_grpd: Dict[str,List[EventKinds]] = field(init=False)
 
   def __post_init__(self, evt_dcts):
     """action.get_evt_dcts()"""
     self.evt_dcts = evt_dcts
-    self.df_dcts = pd.DataFrame(evt_dcts)
+    self.evt_dcts_df = pd.DataFrame(evt_dcts)
 
     self.evts = [e['hunter_event'] for e in evt_dcts]
-    self.df_evts = pd.DataFrame([e.__dict__ for e in self.evts])
+    self.evts_df = pd.DataFrame([e.__dict__ for e in self.evts])
 
-    self.create_df_evts(self.evts)
+    self.create_evts_df(self.evts)
     self.group_by_evt_kind(self.evts)
 
-  def create_df_evts(self,evts):
+  def create_evts_df(self,evts):
     """evts[0].__dataclass_fields__.keys()"""
     lods = []
     for e in evts:
@@ -47,7 +47,7 @@ class DataCollections:
       d.update({'hunter_monostr':str(e)})
       lods.append(d)
     df = pd.DataFrame(lods)
-    self.df_evts = df
+    self.evts_df = df
 
   def group_by_evt_kind(self,evts):
     cll_lst,lne_lst,ret_lst,exc_lst = [],[],[],[]
@@ -62,29 +62,32 @@ class DataCollections:
     self.evts_grpd = d
 
   def __str__(self):
+    join = lambda lst: "\n".join(lst)
+    srv = [s0:=[],s1:=[],s2:=[],s3:=[]]
     self.evts
-    s0 = (
+    s0 += (
       f" ..evt_dcts: List[Dict] (len={len(self.evt_dcts)})",
       f"      :keys: ",
-      f"({', '.join(list(self.evt_dcts[0].__dict__.keys()))})"
+      f"({', '.join(list(self.evt_dcts[0].keys()))})"
     )
-    s2 = (
-      f"     ..evts: List[EventKinds] (len={len(self.df_dcts)})",
+    s1 += (
+      f"     ..evts: List[EventKinds] (len={len(self.evt_dcts_df)})",
       f":EventKinds: Union[CallEvent,LineEvent,ReturnEvent,ExceptionEvent]",
       f"      :keys: ",
       f"({', '.join(list(self.evts[0].__dict__.keys()))})"
     )
-    s1 = (
-      f"  ..df_dcts: pd.DataFrame (len={len(self.df_dcts)})",
+    s2 += (
+      f"  ..evt_dcts_df: pd.DataFrame (len={len(self.evt_dcts_df)})",
       f"   :columns: ",
-      f"{self.df_dcts.columns}"
+      f"{self.evt_dcts_df.columns}"
     )
-    s3 = (
-      f"  ..df_evts: pd.DataFrame (len={len(self.df_evts)})",
+    s3 += (
+      f"  ..evts_df: pd.DataFrame (len={len(self.evts_df)})",
       f"   :columns: ",
-      f"{self.df_evts.columns}"
+      f"{self.evts_df.columns}"
     )
-
+    srvj = join(map(join,srv))
+    return srvj
 
 class Parsed:
   def clrz(self, s,t):
