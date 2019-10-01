@@ -19,7 +19,7 @@ from youtube_dl.hunterconfig import QueryConfig
 from hunter.tracer import Tracer
 from pathlib import Path
 from pdb import set_trace as st
-import os
+import os, io, stackprinter
 import pickle, sys
 
 test = True
@@ -36,8 +36,8 @@ if __name__ == '__main__':
   tracer.trace(query)
   try:
     retval = youtube_dl.main()
-  except SystemExit as exc:
-    tb1 = stackprinter.format(exc)
+  except SystemExit:
+    tb1 = stackprinter.format(sys.exc_info())
     try:
       tracer.stop()
       outval = output.getvalue()
