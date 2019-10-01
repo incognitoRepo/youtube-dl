@@ -2,7 +2,7 @@
 import re,io
 import pandas as pd
 from pathlib import Path
-from itertools import repeat
+from itertools import repeat, cycle, chain
 from collections.abc import MutableMapping
 from collections import UserList, UserString
 from typing import NamedTuple, List, Dict, Iterable, Union
@@ -561,20 +561,23 @@ class ArrowList(UserList):
 @dataclass
 class FormatSymbols:
   symbols_map = {
-           'Tier1':    SymbolTier1(*["¹","¹","¹"]),
-           'Tier2':    SymbolTier2(*["²","²","²"]),
-      'MutableStr':     SymbolList(*["𝑚","≖","⌕"]),
-      'UserString':     SymbolList(*["𝑢","∺","⌖"]),
-  'SimpleFunkWithArgs': SymbolList(*["𝑠","≻","⌙"]),
-      'ParsedJSON':     SymbolList(*["𝑗","≽","⌮"]),
-      'ParsedHTML':     SymbolList(*["𝒉","⊍","⌞"]),
-      'LineEvent':      SymbolList(*["𝑙","⋽","⌯"]),
-      'VerboseList':    SymbolList(*["𝐿","≞","⍆"]),
-      'ParsedTuple':    SymbolList(*["𝐷","∿","⌭"]),
-         'Bullets':                 ["•"],
-         'Arrows':      SymbolList(*["↳","↪","?"]),
-         'Call'  :      "𝑐",
-         'Return':      "𝑟",
+           'Tier1'              :"𝑡¹",
+           'Tier2'              :"𝑡²",
+           'Tier3'              :"𝑡³",
+           'MutableStr'         :SymbolList(*["𝑚","≖","⌕"]),
+           'UserString'         :SymbolList(*["𝑢","∺","⌖"]),
+           'SimpleFunkWithArgs' :SymbolList(*["𝑠","≻","⌙"]),
+           'ParsedJSON'         :SymbolList(*["𝑗","≽","⌮"]),
+           'ParsedHTML'         :SymbolList(*["𝒉","o","⌞"]),
+           'VerboseList'        :SymbolList(*["𝐿","≞","⍆"]),
+           'ParsedTuple'        :SymbolList(*["𝐷","∿","⌭"]),
+           'Bullets'            :["•"],
+           'Arrows'             :SymbolList(*["↳","↪","?"]),
+           'Call'               :"𝑐",
+           'Line'               :["𝑙","∣"],
+           'Return'             :"𝑟",
+           'Exception'          :"𝑒",
+           'Potential'          :["⌯"],
   }
   def add_ws(self,sym,indent=0):
     """ws: whitespace"""
@@ -590,105 +593,39 @@ class FormatSymbols:
       retstr = f"{ws}"
     return retstr
 
-  def get_Tier(self,tier_lvl):
-    tier_key = f"Tier{tier_lvl}"
-    t1,t2,t3 = self.symbols_map[tier_key]
-    return t1,t2,t3
-
-  def get_Tier1(self):
+  def get_tier1(self):
     """Tier1 Symbol
     Whitespace for tiers are absolute
     and are added manually"""
-    t1,t2,t3 = self.symbols_map['Tier1']
-    return t1,t2,t3
+    t1 = self.symbols_map['Tier1']
+    return t1
 
-  def get_Tier2(self):
+  def get_tier2(self):
     """Tier2 Symbol
     Whitespace for tiers are absolute
     and are added manually"""
-    t1,t2,t3 = ts = self.symbols_map['Tier2']
-    t1,t2,t3 = [f" {t}" for t in ts]
-    return t1,t2,t3
+    _t2 = self.symbols_map['Tier2']
+    t2 = f" {_t2}" # add whitespace manually
+    return t2
 
-  def get_MS(self):
-    """MutableStr ≡"""
-    s1,s2,s3 = ss = self.symbols_map['MutableStr']
-    return s1,s2,s3
+  def get_tier3(self):
+    """Tier2 Symbol
+    Whitespace for tiers are absolute
+    and are added manually"""
+    _t3 = self.symbols_map['Tier3']
+    t3 = f"  {_t3}" # add whitespace manually
+    return t3
 
-  def get_US(self,presym=None):
-    """UserString 𝑢"""
-    s1,s2,s3 = ss = self.symbols_map['UserString']
-    if presym:
-      s1,s2,s3 = [f"{presym}{s}" for s in ss]
-    idts = [2,2,2]
-    us1,us2,us3 = uss = [self.add_ws(s,i) for s,i in zip(ss,idts)]
-    return us1,us2,us3
+  def get_line(self,first=True):
+    """event.kind == 'line'"""
+    l1,l2 = ls = self.symbols_map['Line']
+    l1,l2 = f" {l1}",f"  {l2}"
+    if first: return l1
+    else: return l2
 
-  def get_SFWA(self,presym=None):
-    """SimpleFunkWithArgs
-    is used to create the symbols passed to structure1
-    returns sf1,sf2"""
-    s1,s2,s3 = ss = self.symbols_map['SimpleFunkWithArgs']
-    if presym:
-      s1,s2,s3 = [f"{presym}{s}" for s in ss]
-    idts = [3,2,2]
-    sf1,sf2,sf3 = sfs = [self.add_ws(s,i) for s,i in zip(ss,idts)]
-    return sf1,sf2,sf3
-
-  def get_PJ(self,presym=None):
-    """ParsedJSON
-    is used to create the symbols passed to structure2
-    returns pj1,pj2"""
-    s1,s2,s3 = ss = self.symbols_map['ParsedJSON']
-    if presym:
-      s1,s2,s3 = [f"{presym}{s}" for s in ss]
-    idts = [1,2,2]
-    pj1,pj2,pj3 = pjs = [self.add_ws(s,i) for s,i in zip(ss,idts)]
-    return pj1,pj2,pj3
-
-  def get_PH(self,presym=None):
-    """ParsedHTML
-    is used to create the symbols passed to structure2
-    returns ph1,ph2"""
-    s1,s2,s3 = ss = self.symbols_map['ParsedHTML']
-    if presym:
-      s1,s2,s3 = [f"{presym}{s}" for s in ss]
-    idts = [1,2,2]
-    ph1,ph2,ph3 = phs = [self.add_ws(s,i) for s,i in zip(ss,idts)]
-    return ph1,ph2,ph3
-
-  def get_LE(self):
-    """LineEvent & Header"""
-    s1,s2,s3 = ss = self.symbols_map['LineEvent']
-    idts = [2,3,3]
-    le1,le2,le3 = [self.add_ws(s,i) for s,i in zip(ss,idts)]
-    return le1,le2,le3
-
-  def get_VL(self,nargs:int):
-    """VerboseList"""
-    s1,s2,s3 = ss = self.symbols_map['VerboseList']
-    idts = [2,2,2]
-    vl1,vl2,vl3 = [self.add_ws(s,i) for s,i in zip(ss,idts)]
-    vl1 = self.add_ws(sym=s1,indent=2)
-    vl2 = iter([s2] + list(repeat(s3,nargs)))
-    return vl1,vl2
-
-  def get_PT(self,nargs:int):
-    """ParsedTuple"""
-    s1,s2,s3 = ss = self.symbols_map['ParsedTuple']
-    idts = [2,2,3]
-    pt1,pt2,pt3 = [self.add_ws(s,i) for s,i in zip(ss,idts)]
-    pt1 = self.add_ws(sym=s1,indent=2)
-    pt2 = iter([pt2] + list(repeat(pt3,nargs)))
-    return pt1,pt2
-
-  def get_BLTS(self):
-    blt1 = self.symbols_map['Bullets']
-    return blt1
-
-  def get_Arrows(self):
-    a1,a2,a3 = arrs = self.symbols_map['Arrows']
-    return a1,a2,a3
+  def get_exception(self):
+    e1 = self.symbols_map['Exception']
+    return e1
 
   def get_call(self):
     return self.symbols_map["Call"]

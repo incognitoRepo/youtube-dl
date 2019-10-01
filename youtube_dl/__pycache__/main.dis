@@ -1,0 +1,254 @@
+  2           0 LOAD_CONST               0 (0)
+              2 LOAD_CONST               1 (('unicode_literals',))
+              4 IMPORT_NAME              0 (__future__)
+              6 IMPORT_FROM              1 (unicode_literals)
+              8 STORE_NAME               1 (unicode_literals)
+             10 POP_TOP
+
+  8          12 LOAD_CONST               0 (0)
+             14 LOAD_CONST               2 (None)
+             16 IMPORT_NAME              2 (sys)
+             18 STORE_NAME               2 (sys)
+
+ 10          20 LOAD_NAME                3 (__package__)
+             22 LOAD_CONST               2 (None)
+             24 COMPARE_OP               8 (is)
+             26 POP_JUMP_IF_FALSE       96
+             28 LOAD_NAME                4 (hasattr)
+             30 LOAD_NAME                2 (sys)
+             32 LOAD_CONST               3 ('frozen')
+             34 CALL_FUNCTION            2
+             36 POP_JUMP_IF_TRUE        96
+
+ 12          38 LOAD_CONST               0 (0)
+             40 LOAD_CONST               2 (None)
+             42 IMPORT_NAME              5 (os.path)
+             44 STORE_NAME               6 (os)
+
+ 13          46 LOAD_NAME                6 (os)
+             48 LOAD_ATTR                7 (path)
+             50 LOAD_METHOD              8 (realpath)
+             52 LOAD_NAME                6 (os)
+             54 LOAD_ATTR                7 (path)
+             56 LOAD_METHOD              9 (abspath)
+             58 LOAD_NAME               10 (__file__)
+             60 CALL_METHOD              1
+             62 CALL_METHOD              1
+             64 STORE_NAME               7 (path)
+
+ 14          66 LOAD_NAME                2 (sys)
+             68 LOAD_ATTR                7 (path)
+             70 LOAD_METHOD             11 (insert)
+             72 LOAD_CONST               0 (0)
+             74 LOAD_NAME                6 (os)
+             76 LOAD_ATTR                7 (path)
+             78 LOAD_METHOD             12 (dirname)
+             80 LOAD_NAME                6 (os)
+             82 LOAD_ATTR                7 (path)
+             84 LOAD_METHOD             12 (dirname)
+             86 LOAD_NAME                7 (path)
+             88 CALL_METHOD              1
+             90 CALL_METHOD              1
+             92 CALL_METHOD              2
+             94 POP_TOP
+
+ 16     >>   96 LOAD_CONST               0 (0)
+             98 LOAD_CONST               2 (None)
+            100 IMPORT_NAME             13 (youtube_dl)
+            102 STORE_NAME              13 (youtube_dl)
+
+ 17         104 LOAD_CONST               0 (0)
+            106 LOAD_CONST               2 (None)
+            108 IMPORT_NAME             14 (hunter)
+            110 STORE_NAME              14 (hunter)
+
+ 18         112 LOAD_CONST               0 (0)
+            114 LOAD_CONST               4 (('QueryConfig',))
+            116 IMPORT_NAME             15 (youtube_dl.hunterconfig)
+            118 IMPORT_FROM             16 (QueryConfig)
+            120 STORE_NAME              16 (QueryConfig)
+            122 POP_TOP
+
+ 19         124 LOAD_CONST               0 (0)
+            126 LOAD_CONST               5 (('Tracer',))
+            128 IMPORT_NAME             17 (hunter.tracer)
+            130 IMPORT_FROM             18 (Tracer)
+            132 STORE_NAME              18 (Tracer)
+            134 POP_TOP
+
+ 20         136 LOAD_CONST               0 (0)
+            138 LOAD_CONST               6 (('Path',))
+            140 IMPORT_NAME             19 (pathlib)
+            142 IMPORT_FROM             20 (Path)
+            144 STORE_NAME              20 (Path)
+            146 POP_TOP
+
+ 21         148 LOAD_CONST               0 (0)
+            150 LOAD_CONST               7 (('set_trace',))
+            152 IMPORT_NAME             21 (pdb)
+            154 IMPORT_FROM             22 (set_trace)
+            156 STORE_NAME              23 (st)
+            158 POP_TOP
+
+ 22         160 LOAD_CONST               0 (0)
+            162 LOAD_CONST               2 (None)
+            164 IMPORT_NAME              6 (os)
+            166 STORE_NAME               6 (os)
+            168 LOAD_CONST               0 (0)
+            170 LOAD_CONST               2 (None)
+            172 IMPORT_NAME             24 (io)
+            174 STORE_NAME              24 (io)
+
+ 23         176 LOAD_CONST               0 (0)
+            178 LOAD_CONST               2 (None)
+            180 IMPORT_NAME             25 (pickle)
+            182 STORE_NAME              25 (pickle)
+            184 LOAD_CONST               0 (0)
+            186 LOAD_CONST               2 (None)
+            188 IMPORT_NAME              2 (sys)
+            190 STORE_NAME               2 (sys)
+
+ 25         192 LOAD_CONST               8 (True)
+            194 STORE_NAME              26 (test)
+
+ 27         196 LOAD_NAME               27 (__name__)
+            198 LOAD_CONST               9 ('__main__')
+            200 COMPARE_OP               2 (==)
+            202 EXTENDED_ARG             1
+            204 POP_JUMP_IF_FALSE      430
+
+ 28         206 LOAD_NAME               26 (test)
+            208 EXTENDED_ARG             1
+            210 POP_JUMP_IF_FALSE      422
+
+ 29         212 LOAD_NAME               16 (QueryConfig)
+            214 CALL_FUNCTION            0
+            216 STORE_NAME              28 (qc)
+
+ 30         218 LOAD_NAME               28 (qc)
+            220 LOAD_METHOD             29 (eventpickle)
+            222 CALL_METHOD              0
+            224 STORE_NAME              30 (qcfg)
+
+ 31         226 LOAD_NAME               18 (Tracer)
+            228 CALL_FUNCTION            0
+            230 STORE_NAME              31 (tracer)
+
+ 32         232 LOAD_NAME               30 (qcfg)
+            234 UNPACK_SEQUENCE          6
+            236 STORE_NAME              32 (query)
+            238 STORE_NAME              33 (actions)
+            240 STORE_NAME              34 (outputs)
+            242 STORE_NAME              35 (filenames)
+            244 STORE_NAME              36 (write_func)
+            246 STORE_NAME              37 (evtdcts_pklpth)
+
+ 33         248 LOAD_NAME               33 (actions)
+            250 LOAD_CONST               0 (0)
+            252 BINARY_SUBSCR
+            254 STORE_NAME              38 (action)
+
+ 34         256 LOAD_NAME               24 (io)
+            258 LOAD_METHOD             39 (StringIO)
+            260 CALL_METHOD              0
+            262 STORE_NAME              40 (output)
+
+ 35         264 LOAD_NAME               40 (output)
+            266 LOAD_NAME               38 (action)
+            268 STORE_ATTR              41 (_stream)
+
+ 36         270 LOAD_NAME               31 (tracer)
+            272 LOAD_METHOD             42 (trace)
+            274 LOAD_NAME               32 (query)
+            276 CALL_METHOD              1
+            278 POP_TOP
+
+ 37         280 SETUP_FINALLY          116 (to 398)
+            282 SETUP_FINALLY           12 (to 296)
+
+ 38         284 LOAD_NAME               13 (youtube_dl)
+            286 LOAD_METHOD             43 (main)
+            288 CALL_METHOD              0
+            290 STORE_NAME              44 (retval)
+            292 POP_BLOCK
+            294 JUMP_FORWARD            98 (to 394)
+
+ 39     >>  296 DUP_TOP
+            298 LOAD_NAME               45 (SystemExit)
+            300 COMPARE_OP              10 (exception match)
+            302 EXTENDED_ARG             1
+            304 POP_JUMP_IF_FALSE      356
+            306 POP_TOP
+            308 POP_TOP
+            310 POP_TOP
+
+ 40         312 LOAD_NAME               31 (tracer)
+            314 LOAD_METHOD             46 (stop)
+            316 CALL_METHOD              0
+            318 POP_TOP
+
+ 43         320 LOAD_NAME               40 (output)
+            322 LOAD_METHOD             47 (close)
+            324 CALL_METHOD              0
+            326 POP_TOP
+
+ 49         328 LOAD_NAME               48 (print)
+            330 LOAD_CONST              10 ('wrote hunter io to ')
+            332 LOAD_CONST              11 (<code object <genexpr> at 0x10c92fc90, file "/Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/__main__.py", line 49>)
+            334 LOAD_CONST              12 ('<genexpr>')
+            336 MAKE_FUNCTION            0
+            338 LOAD_NAME               35 (filenames)
+            340 GET_ITER
+            342 CALL_FUNCTION            1
+            344 FORMAT_VALUE             0
+            346 BUILD_STRING             2
+            348 CALL_FUNCTION            1
+            350 POP_TOP
+            352 POP_EXCEPT
+            354 JUMP_FORWARD            38 (to 394)
+
+ 50     >>  356 POP_TOP
+            358 POP_TOP
+            360 POP_TOP
+
+ 51         362 LOAD_NAME               48 (print)
+            364 LOAD_NAME                2 (sys)
+            366 LOAD_METHOD             49 (exc_info)
+            368 CALL_METHOD              0
+            370 CALL_FUNCTION            1
+            372 POP_TOP
+
+ 52         374 LOAD_NAME               48 (print)
+            376 LOAD_CONST              13 ('final except')
+            378 CALL_FUNCTION            1
+            380 POP_TOP
+
+ 53         382 LOAD_NAME               23 (st)
+            384 CALL_FUNCTION            0
+            386 POP_TOP
+            388 POP_EXCEPT
+            390 JUMP_FORWARD             2 (to 394)
+            392 END_FINALLY
+        >>  394 POP_BLOCK
+            396 BEGIN_FINALLY
+
+ 55     >>  398 LOAD_NAME               48 (print)
+            400 LOAD_NAME                2 (sys)
+            402 LOAD_METHOD             49 (exc_info)
+            404 CALL_METHOD              0
+            406 CALL_FUNCTION            1
+            408 POP_TOP
+
+ 56         410 LOAD_NAME               48 (print)
+            412 LOAD_CONST              14 ('finally...')
+            414 CALL_FUNCTION            1
+            416 POP_TOP
+            418 END_FINALLY
+            420 JUMP_FORWARD             8 (to 430)
+
+ 60     >>  422 LOAD_NAME               13 (youtube_dl)
+            424 LOAD_METHOD             43 (main)
+            426 CALL_METHOD              0
+            428 POP_TOP
+        >>  430 LOAD_CONST               2 (None)
+            432 RETURN_VALUE

@@ -1,0 +1,835 @@
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/evt_loader.py, line 120, in process_list
+    113  def process_list(self,lst,depth,c=False):
+ (...)
+    116    for elm in lst:
+    117      new_e = process_vs(repr(elm),depth=depth,c=c)
+    118      new_lst.append(new_e)
+    119    try:
+--> 120      s = join_str.join(new_lst)
+    121    except Exception as exc:
+    ..................................................
+     self = <youtube_dl.evt_loader.Containers object at 0x1071c2790>
+     lst = ["'None'", ]
+     depth = 0
+     c = False
+     elm = "'None'"
+     new_e = ['\'"\\\'None\\\'"\'', ]
+     new_lst = [['\'"\\\'None\\\'"\'', ], ]
+    ..................................................
+
+TypeError: sequence item 0: expected str instance, list found
+
+While handling the above exception, another exception occurred:
+
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/evt_loader.py, line 241, in process_vs
+    198  def process_vs(vs,depth=0,c=False):
+ (...)
+    237        else:
+    238          try:
+    239            if hasattr(v,'__dict__'):
+    240              d = v.__dict__
+--> 241              ns = containers.process_dict(d,depth=depth) if not c else containers.process_dict(d,depth=depth,c=True)
+    242              new_vs.append(ns)
+    ..................................................
+     vs = ['2019.09.12.1', <optparse.IndentedHelpFormatter object at 0
+           x1079fb1c0>, '%prog [OPTIONS] URL [URL...]', 'resolve', ]
+     depth = 0
+     c = False
+     v = <optparse.IndentedHelpFormatter object at 0x1079fb1c0>
+     d = {'parser': None,
+          'indent_increment': 2,
+          'width': 232,
+          'help_position': 80,
+          'max_help_position': 80,
+          'current_indent': 0,
+          'level': 0,
+          'help_width': None,
+          'short_first': 1,
+          'default_tag': '%default',
+          'option_strings': {},
+          '_short_opt_fmt': '%s %s',
+          '_long_opt_fmt': '%s=%s',
+          'format_option_strings': <function 'parseOpts.<locals>._for
+          mat_option_string' options.py:94>}
+     v.__dict__ = {'parser': None,
+                   'indent_increment': 2,
+                   'width': 232,
+                   'help_position': 80,
+                   'max_help_position': 80,
+                   'current_indent': 0,
+                   'level': 0,
+                   'help_width': None,
+                   'short_first': 1,
+                   'default_tag': '%default',
+                   'option_strings': {},
+                   '_short_opt_fmt': '%s %s',
+                   '_long_opt_fmt': '%s=%s',
+                   'format_option_strings': <function 'parseOpts.<locals>._for
+                   mat_option_string' options.py:94>}
+     ns = "'2019.09.12.1'"
+     containers.process_dict = <method 'Containers.process_dict' of <youtube_dl.evt_loader.
+                                Containers object at 0x1071c2790> evt_loader.py:128>
+    ..................................................
+
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/evt_loader.py, line 136, in process_dict
+    128  def process_dict(self,dct,depth,c=False):
+ (...)
+    132      new_v = process_vs(repr(v),depth=depth,c=c)
+    133      new_d.update({k:new_v})
+    134    new_lst = []
+    135    for k,v in new_d.items():
+--> 136      nv = process_vs([v],depth=depth,c=c)
+    137      assert len(nv) == 1, info(nv)
+    ..................................................
+     self = <youtube_dl.evt_loader.Containers object at 0x1071c2790>
+     dct = {'parser': None,
+            'indent_increment': 2,
+            'width': 232,
+            'help_position': 80,
+            'max_help_position': 80,
+            'current_indent': 0,
+            'level': 0,
+            'help_width': None,
+            'short_first': 1,
+            'default_tag': '%default',
+            'option_strings': {},
+            '_short_opt_fmt': '%s %s',
+            '_long_opt_fmt': '%s=%s',
+            'format_option_strings': <function 'parseOpts.<locals>._for
+            mat_option_string' options.py:94>}
+     depth = 0
+     c = False
+     new_v = ["'<function parseOpts.<locals>._format_option_string at 0x1
+              09473ca0>'", ]
+     v = ["'None'", ]
+     k = 'parser'
+     new_lst = []
+    ..................................................
+
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/evt_loader.py, line 259, in process_vs
+    198  def process_vs(vs,depth=0,c=False):
+ (...)
+    255          ns = implies(v,depth=depth) if not c else implies(v,depth=depth,c=True)
+    256          new_vs.append(ns)
+    257        elif isinstance(v,list) or isinstance(v,dict) or isinstance(v,tuple):
+    258          process = containers.process_dict if isinstance(v,dict) else containers.process_list
+--> 259          ns = process(v,depth=depth) if not c else process(v,depth=depth,c=True)
+    260          nl = ["{",ns,"}"] if isinstance(v,dict) else ["[",ns,"]"]
+    ..................................................
+     vs = [["'None'", ], ]
+     depth = 0
+     c = False
+     implies = <method 'Containers.str_implies_container' of <youtube_dl.ev
+                t_loader.Containers object at 0x1071c2790> evt_loader.py:81>
+     v = ["'None'", ]
+     process = <method 'Containers.process_list' of <youtube_dl.evt_loader.
+                Containers object at 0x1071c2790> evt_loader.py:113>
+     containers.process_dict = <method 'Containers.process_dict' of <youtube_dl.evt_loader.
+                                Containers object at 0x1071c2790> evt_loader.py:128>
+     containers.process_list = <method 'Containers.process_list' of <youtube_dl.evt_loader.
+                                Containers object at 0x1071c2790> evt_loader.py:113>
+    ..................................................
+
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/evt_loader.py, line 124, in process_list
+    113  def process_list(self,lst,depth,c=False):
+ (...)
+    120      s = join_str.join(new_lst)
+    121    except Exception as exc:
+    122      with open('el16','a') as f:
+    123        f.write(stackprinter.format(exc))
+--> 124        f.write('\n'.join(new_lst))
+    125      raise SystemExit
+    ..................................................
+     self = <youtube_dl.evt_loader.Containers object at 0x1071c2790>
+     lst = ["'None'", ]
+     depth = 0
+     c = False
+     new_lst = [['\'"\\\'None\\\'"\'', ], ]
+     f = <_io.TextIOWrapper name='el16' mode='a' encoding='UTF-8'>
+     stackprinter.format = <function 'format' __init__.py:17>
+    ..................................................
+
+---- (full traceback above) ----
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/evt_loader.py, line 241, in process_vs
+    ns = containers.process_dict(d,depth=depth) if not c else containers.process_dict(d,depth=depth,c=True)
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/evt_loader.py, line 136, in process_dict
+    nv = process_vs([v],depth=depth,c=c)
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/evt_loader.py, line 259, in process_vs
+    ns = process(v,depth=depth) if not c else process(v,depth=depth,c=True)
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/evt_loader.py, line 124, in process_list
+    f.write('\n'.join(new_lst))
+
+TypeError: sequence item 0: expected str instance, list found================================================================================
+
+
+<class 'optparse.IndentedHelpFormatter'>, cannot len this obj
+<optparse.IndentedHelpFormatter object at 0x1079fb1c0>
+
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/evt_loader.py, line 120, in process_list
+    113  def process_list(self,lst,depth,c=False):
+ (...)
+    116    for elm in lst:
+    117      new_e = process_vs(repr(elm),depth=depth,c=c)
+    118      new_lst.append(new_e)
+    119    try:
+--> 120      s = join_str.join(new_lst)
+    121    except Exception as exc:
+    ..................................................
+     self = <youtube_dl.evt_loader.Containers object at 0x10760f790>
+     lst = ["'None'", ]
+     depth = 0
+     c = False
+     elm = "'None'"
+     new_e = ['\'"\\\'None\\\'"\'', ]
+     new_lst = [['\'"\\\'None\\\'"\'', ], ]
+    ..................................................
+
+TypeError: sequence item 0: expected str instance, list found
+
+While handling the above exception, another exception occurred:
+
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/evt_loader.py, line 242, in process_vs
+    198  def process_vs(vs,depth=0,c=False):
+ (...)
+    238        else:
+    239          try:
+    240            if hasattr(v,'__dict__'):
+    241              d = v.__dict__
+--> 242              ns = containers.process_dict(d,depth=depth) if not c else containers.process_dict(d,depth=depth,c=True)
+    243              new_vs.append(ns)
+    ..................................................
+     vs = ['2019.09.12.1', <optparse.IndentedHelpFormatter object at 0
+           x107dd4ee0>, '%prog [OPTIONS] URL [URL...]', 'resolve', ]
+     depth = 0
+     c = False
+     v = <optparse.IndentedHelpFormatter object at 0x107dd4ee0>
+     d = {'parser': None,
+          'indent_increment': 2,
+          'width': 232,
+          'help_position': 80,
+          'max_help_position': 80,
+          'current_indent': 0,
+          'level': 0,
+          'help_width': None,
+          'short_first': 1,
+          'default_tag': '%default',
+          'option_strings': {},
+          '_short_opt_fmt': '%s %s',
+          '_long_opt_fmt': '%s=%s',
+          'format_option_strings': <function 'parseOpts.<locals>._for
+          mat_option_string' options.py:94>}
+     v.__dict__ = {'parser': None,
+                   'indent_increment': 2,
+                   'width': 232,
+                   'help_position': 80,
+                   'max_help_position': 80,
+                   'current_indent': 0,
+                   'level': 0,
+                   'help_width': None,
+                   'short_first': 1,
+                   'default_tag': '%default',
+                   'option_strings': {},
+                   '_short_opt_fmt': '%s %s',
+                   '_long_opt_fmt': '%s=%s',
+                   'format_option_strings': <function 'parseOpts.<locals>._for
+                   mat_option_string' options.py:94>}
+     ns = "'2019.09.12.1'"
+     containers.process_dict = <method 'Containers.process_dict' of <youtube_dl.evt_loader.
+                                Containers object at 0x10760f790> evt_loader.py:128>
+    ..................................................
+
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/evt_loader.py, line 136, in process_dict
+    128  def process_dict(self,dct,depth,c=False):
+ (...)
+    132      new_v = process_vs(repr(v),depth=depth,c=c)
+    133      new_d.update({k:new_v})
+    134    new_lst = []
+    135    for k,v in new_d.items():
+--> 136      nv = process_vs([v],depth=depth,c=c)
+    137      assert len(nv) == 1, info(nv)
+    ..................................................
+     self = <youtube_dl.evt_loader.Containers object at 0x10760f790>
+     dct = {'parser': None,
+            'indent_increment': 2,
+            'width': 232,
+            'help_position': 80,
+            'max_help_position': 80,
+            'current_indent': 0,
+            'level': 0,
+            'help_width': None,
+            'short_first': 1,
+            'default_tag': '%default',
+            'option_strings': {},
+            '_short_opt_fmt': '%s %s',
+            '_long_opt_fmt': '%s=%s',
+            'format_option_strings': <function 'parseOpts.<locals>._for
+            mat_option_string' options.py:94>}
+     depth = 0
+     c = False
+     new_v = ["'<function parseOpts.<locals>._format_option_string at 0x1
+              098beca0>'", ]
+     v = ["'None'", ]
+     k = 'parser'
+     new_lst = []
+    ..................................................
+
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/evt_loader.py, line 260, in process_vs
+    198  def process_vs(vs,depth=0,c=False):
+ (...)
+    256          ns = implies(v,depth=depth) if not c else implies(v,depth=depth,c=True)
+    257          new_vs.append(ns)
+    258        elif isinstance(v,list) or isinstance(v,dict) or isinstance(v,tuple):
+    259          process = containers.process_dict if isinstance(v,dict) else containers.process_list
+--> 260          ns = process(v,depth=depth) if not c else process(v,depth=depth,c=True)
+    261          nl = ["{",ns,"}"] if isinstance(v,dict) else ["[",ns,"]"]
+    ..................................................
+     vs = [["'None'", ], ]
+     depth = 0
+     c = False
+     implies = <method 'Containers.str_implies_container' of <youtube_dl.ev
+                t_loader.Containers object at 0x10760f790> evt_loader.py:81>
+     v = ["'None'", ]
+     process = <method 'Containers.process_list' of <youtube_dl.evt_loader.
+                Containers object at 0x10760f790> evt_loader.py:113>
+     containers.process_dict = <method 'Containers.process_dict' of <youtube_dl.evt_loader.
+                                Containers object at 0x10760f790> evt_loader.py:128>
+     containers.process_list = <method 'Containers.process_list' of <youtube_dl.evt_loader.
+                                Containers object at 0x10760f790> evt_loader.py:113>
+    ..................................................
+
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/evt_loader.py, line 124, in process_list
+    113  def process_list(self,lst,depth,c=False):
+ (...)
+    120      s = join_str.join(new_lst)
+    121    except Exception as exc:
+    122      with open('el16','a') as f:
+    123        f.write(stackprinter.format(exc))
+--> 124        f.write('\n'.join(new_lst))
+    125      raise SystemExit
+    ..................................................
+     self = <youtube_dl.evt_loader.Containers object at 0x10760f790>
+     lst = ["'None'", ]
+     depth = 0
+     c = False
+     new_lst = [['\'"\\\'None\\\'"\'', ], ]
+     f = <_io.TextIOWrapper name='el16' mode='a' encoding='UTF-8'>
+     stackprinter.format = <function 'format' __init__.py:17>
+    ..................................................
+
+---- (full traceback above) ----
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/evt_loader.py, line 242, in process_vs
+    ns = containers.process_dict(d,depth=depth) if not c else containers.process_dict(d,depth=depth,c=True)
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/evt_loader.py, line 136, in process_dict
+    nv = process_vs([v],depth=depth,c=c)
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/evt_loader.py, line 260, in process_vs
+    ns = process(v,depth=depth) if not c else process(v,depth=depth,c=True)
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/evt_loader.py, line 124, in process_list
+    f.write('\n'.join(new_lst))
+
+TypeError: sequence item 0: expected str instance, list found================================================================================
+
+
+<class 'optparse.IndentedHelpFormatter'>, cannot len this obj
+<optparse.IndentedHelpFormatter object at 0x107dd4ee0>
+
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/evt_loader.py, line 120, in process_list
+    113  def process_list(self,lst,depth,c=False):
+ (...)
+    116    for elm in lst:
+    117      new_e = process_vs(repr(elm),depth=depth,c=c)
+    118      new_lst.append(new_e)
+    119    try:
+--> 120      s = join_str.join(new_lst)
+    121    except Exception as exc:
+    ..................................................
+     self = <youtube_dl.evt_loader.Containers object at 0x1073be790>
+     lst = ["'None'", ]
+     depth = 0
+     c = False
+     elm = "'None'"
+     new_e = ['\'"\\\'None\\\'"\'', ]
+     new_lst = [['\'"\\\'None\\\'"\'', ], ]
+    ..................................................
+
+TypeError: sequence item 0: expected str instance, list found
+
+While handling the above exception, another exception occurred:
+
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/evt_loader.py, line 242, in process_vs
+    198  def process_vs(vs,depth=0,c=False):
+ (...)
+    238        else:
+    239          try:
+    240            if hasattr(v,'__dict__'):
+    241              d = v.__dict__
+--> 242              ns = containers.process_dict(d,depth=depth) if not c else containers.process_dict(d,depth=depth,c=True)
+    243              new_vs.append(ns)
+    ..................................................
+     vs = ['2019.09.12.1', <optparse.IndentedHelpFormatter object at 0
+           x107bee5e0>, '%prog [OPTIONS] URL [URL...]', 'resolve', ]
+     depth = 0
+     c = False
+     v = <optparse.IndentedHelpFormatter object at 0x107bee5e0>
+     d = {'parser': None,
+          'indent_increment': 2,
+          'width': 232,
+          'help_position': 80,
+          'max_help_position': 80,
+          'current_indent': 0,
+          'level': 0,
+          'help_width': None,
+          'short_first': 1,
+          'default_tag': '%default',
+          'option_strings': {},
+          '_short_opt_fmt': '%s %s',
+          '_long_opt_fmt': '%s=%s',
+          'format_option_strings': <function 'parseOpts.<locals>._for
+          mat_option_string' options.py:94>}
+     v.__dict__ = {'parser': None,
+                   'indent_increment': 2,
+                   'width': 232,
+                   'help_position': 80,
+                   'max_help_position': 80,
+                   'current_indent': 0,
+                   'level': 0,
+                   'help_width': None,
+                   'short_first': 1,
+                   'default_tag': '%default',
+                   'option_strings': {},
+                   '_short_opt_fmt': '%s %s',
+                   '_long_opt_fmt': '%s=%s',
+                   'format_option_strings': <function 'parseOpts.<locals>._for
+                   mat_option_string' options.py:94>}
+     ns = "'2019.09.12.1'"
+     containers.process_dict = <method 'Containers.process_dict' of <youtube_dl.evt_loader.
+                                Containers object at 0x1073be790> evt_loader.py:128>
+    ..................................................
+
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/evt_loader.py, line 136, in process_dict
+    128  def process_dict(self,dct,depth,c=False):
+ (...)
+    132      new_v = process_vs(repr(v),depth=depth,c=c)
+    133      new_d.update({k:new_v})
+    134    new_lst = []
+    135    for k,v in new_d.items():
+--> 136      nv = process_vs([v],depth=depth,c=c)
+    137      assert len(nv) == 1, info(nv)
+    ..................................................
+     self = <youtube_dl.evt_loader.Containers object at 0x1073be790>
+     dct = {'parser': None,
+            'indent_increment': 2,
+            'width': 232,
+            'help_position': 80,
+            'max_help_position': 80,
+            'current_indent': 0,
+            'level': 0,
+            'help_width': None,
+            'short_first': 1,
+            'default_tag': '%default',
+            'option_strings': {},
+            '_short_opt_fmt': '%s %s',
+            '_long_opt_fmt': '%s=%s',
+            'format_option_strings': <function 'parseOpts.<locals>._for
+            mat_option_string' options.py:94>}
+     depth = 0
+     c = False
+     new_v = ["'<function parseOpts.<locals>._format_option_string at 0x1
+              07c86ca0>'", ]
+     v = ["'None'", ]
+     k = 'parser'
+     new_lst = []
+    ..................................................
+
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/evt_loader.py, line 260, in process_vs
+    198  def process_vs(vs,depth=0,c=False):
+ (...)
+    256          ns = implies(v,depth=depth) if not c else implies(v,depth=depth,c=True)
+    257          new_vs.append(ns)
+    258        elif isinstance(v,list) or isinstance(v,dict) or isinstance(v,tuple):
+    259          process = containers.process_dict if isinstance(v,dict) else containers.process_list
+--> 260          ns = process(v,depth=depth) if not c else process(v,depth=depth,c=True)
+    261          nl = ["{",ns,"}"] if isinstance(v,dict) else ["[",ns,"]"]
+    ..................................................
+     vs = [["'None'", ], ]
+     depth = 0
+     c = False
+     implies = <method 'Containers.str_implies_container' of <youtube_dl.ev
+                t_loader.Containers object at 0x1073be790> evt_loader.py:81>
+     v = ["'None'", ]
+     process = <method 'Containers.process_list' of <youtube_dl.evt_loader.
+                Containers object at 0x1073be790> evt_loader.py:113>
+     containers.process_dict = <method 'Containers.process_dict' of <youtube_dl.evt_loader.
+                                Containers object at 0x1073be790> evt_loader.py:128>
+     containers.process_list = <method 'Containers.process_list' of <youtube_dl.evt_loader.
+                                Containers object at 0x1073be790> evt_loader.py:113>
+    ..................................................
+
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/evt_loader.py, line 124, in process_list
+    113  def process_list(self,lst,depth,c=False):
+ (...)
+    120      s = join_str.join(new_lst)
+    121    except Exception as exc:
+    122      with open('el16','a') as f:
+    123        f.write(stackprinter.format(exc))
+--> 124        f.write('\n'.join(new_lst))
+    125      raise SystemExit
+    ..................................................
+     self = <youtube_dl.evt_loader.Containers object at 0x1073be790>
+     lst = ["'None'", ]
+     depth = 0
+     c = False
+     new_lst = [['\'"\\\'None\\\'"\'', ], ]
+     f = <_io.TextIOWrapper name='el16' mode='a' encoding='UTF-8'>
+     stackprinter.format = <function 'format' __init__.py:17>
+    ..................................................
+
+---- (full traceback above) ----
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/evt_loader.py, line 242, in process_vs
+    ns = containers.process_dict(d,depth=depth) if not c else containers.process_dict(d,depth=depth,c=True)
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/evt_loader.py, line 136, in process_dict
+    nv = process_vs([v],depth=depth,c=c)
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/evt_loader.py, line 260, in process_vs
+    ns = process(v,depth=depth) if not c else process(v,depth=depth,c=True)
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/evt_loader.py, line 124, in process_list
+    f.write('\n'.join(new_lst))
+
+TypeError: sequence item 0: expected str instance, list found================================================================================
+
+
+<class 'optparse.IndentedHelpFormatter'>, cannot len this obj
+<optparse.IndentedHelpFormatter object at 0x107bee5e0>
+
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/evt_loader.py, line 242, in process_vs
+    198  def process_vs(vs,depth=0,c=False):
+ (...)
+    238        else:
+    239          try:
+    240            if hasattr(v,'__dict__'):
+    241              d = v.__dict__
+--> 242              ns = containers.process_dict(d,depth=depth) if not c else containers.process_dict(d,depth=depth,c=True)
+    243              new_vs.append(ns)
+    ..................................................
+     vs = [<optparse.OptionGroup object at 0x10736a970>, <optparse.Opt
+           ionGroup object at 0x108e079a0>, <optparse.OptionGroup objec
+           t at 0x108e07ac0>, <optparse.OptionGroup object at 0x108e07c
+           10>, <optparse.OptionGroup object at 0x108e81520>, <optparse
+           .OptionGroup object at 0x108e81f70>, <optparse.OptionGroup o
+           bject at 0x108e92400>, <optparse.OptionGroup object at 0x108
+           e81a90>, <optparse.OptionGroup object at 0x108e818b0>, <optp
+           arse.OptionGroup object at 0x108e81220>, <optparse.OptionGro
+           up object at 0x108e8...
+     depth = 0
+     c = False
+     v = <optparse.OptionGroup object at 0x10736a970>
+     d = {'parser': <optparse.OptionParser object at 0x10736aac0>,
+          'option_list': [<Option at 0x108e07070: -h/--help>, <Option
+           at 0x10736a4f0: --version>, <Option at 0x10736a790: -U/--up
+          date>, <Option at 0x108e070a0: -i/--ignore-errors>, <Option 
+          at 0x108e07040: --abort-on-error>, <Option at 0x108e071c0: -
+          -dump-user-agent>, <Option at 0x108e07130: --list-extractors
+          >, <Option at 0x108e07190: --extractor-descriptions>, <Optio
+          n at 0x108e07460: --force-generic-extractor>, <Option at 0x1
+          08e07430: --default-se...
+     v.__dict__ = {'parser': <optparse.OptionParser object at 0x10736aac0>,
+                   'option_list': [<Option at 0x108e07070: -h/--help>, <Option
+                    at 0x10736a4f0: --version>, <Option at 0x10736a790: -U/--up
+                   date>, <Option at 0x108e070a0: -i/--ignore-errors>, <Option 
+                   at 0x108e07040: --abort-on-error>, <Option at 0x108e071c0: -
+                   -dump-user-agent>, <Option at 0x108e07130: --list-extractors
+                   >, <Option at 0x108e07190: --extractor-descriptions>, <Optio
+                   n at 0x108e07460: --force-generic-extractor>, <Option at 0x1
+                   08e07430: --default-se...
+     containers.process_dict = <method 'Containers.process_dict' of <youtube_dl.evt_loader.
+                                Containers object at 0x106ba5790> evt_loader.py:128>
+    ..................................................
+
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/evt_loader.py, line 132, in process_dict
+    128  def process_dict(self,dct,depth,c=False):
+    129    join_str = f",\n{' '*depth}"
+    130    new_d = {}
+    131    for k,v in dct.items():
+--> 132      new_v = process_vs(v,depth=depth,c=c)
+    133      new_d.update({k:new_v})
+    ..................................................
+     self = <youtube_dl.evt_loader.Containers object at 0x106ba5790>
+     dct = {'parser': <optparse.OptionParser object at 0x10736aac0>,
+            'option_list': [<Option at 0x108e07070: -h/--help>, <Option
+             at 0x10736a4f0: --version>, <Option at 0x10736a790: -U/--up
+            date>, <Option at 0x108e070a0: -i/--ignore-errors>, <Option 
+            at 0x108e07040: --abort-on-error>, <Option at 0x108e071c0: -
+            -dump-user-agent>, <Option at 0x108e07130: --list-extractors
+            >, <Option at 0x108e07190: --extractor-descriptions>, <Optio
+            n at 0x108e07460: --force-generic-extractor>, <Option at 0x1
+            08e07430: --default-se...
+     depth = 0
+     c = False
+     join_str = ',\n'
+     new_d = {}
+     k = 'parser'
+     v = <optparse.OptionParser object at 0x10736aac0>
+    ..................................................
+
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/evt_loader.py, line 207, in process_vs
+    198  def process_vs(vs,depth=0,c=False):
+ (...)
+    203      sv = repr(v)
+    204      if sv.startswith("<"):
+    205        with open('el205','a') as f:
+    206          f.write(sv)
+--> 207          f.write(str(v.__dict__))
+    208      if not v:
+    ..................................................
+     vs = [<optparse.OptionParser object at 0x10736aac0>, ]
+     depth = 0
+     c = False
+     sv = '<optparse.OptionParser object at 0x10736aac0>'
+     v = <optparse.OptionParser object at 0x10736aac0>
+     f = <_io.TextIOWrapper name='el205' mode='a' encoding='UTF-8'>
+     v.__dict__ = {'option_list': [],
+                   'option_groups': [<optparse.OptionGroup object at 0x10736a9
+                   70>, <optparse.OptionGroup object at 0x108e079a0>, <optparse
+                   .OptionGroup object at 0x108e07ac0>, <optparse.OptionGroup o
+                   bject at 0x108e07c10>, <optparse.OptionGroup object at 0x108
+                   e81520>, <optparse.OptionGroup object at 0x108e81f70>, <optp
+                   arse.OptionGroup object at 0x108e92400>, <optparse.OptionGro
+                   up object at 0x108e81a90>, <optparse.OptionGroup object at 0
+                   x108e818b0>, <optparse.OptionGroup object at 0x108e81220>, <
+                   ...
+    ..................................................
+
+File /Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/optparse.py, line 80, in _repr
+    79   def _repr(self):
+--> 80       return "<%s at 0x%x: %s>" % (self.__class__.__name__, id(self), self)
+    ..................................................
+     self = <Values at 0x108e928b0: {'update_self': None, 'ignoreerrors'
+             : False, 'dump_user_agent': False, 'list_extractors': False,
+              'list_extractor_descriptions': False, 'force_generic_extrac
+             tor': False, 'default_search': None, 'ignore_config': None, 
+             'config_location': None, 'extract_flat': False, 'mark_watche
+             d': False, 'no_color': False, 'proxy': None, 'socket_timeout
+             ': None, 'source_address': None, 'geo_verification_proxy': N
+             one, 'cn_verification_proxy': None, 'geo_bypass': True, 'geo
+             _bypass_country': No...
+     self.__class__.__name__ = 'Values'
+    ..................................................
+
+File /Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/optparse.py, line 831, in __str__
+    830  def __str__(self):
+--> 831      return str(self.__dict__)
+    ..................................................
+     self = <Values at 0x108e928b0: {'update_self': None, 'ignoreerrors'
+             : False, 'dump_user_agent': False, 'list_extractors': False,
+              'list_extractor_descriptions': False, 'force_generic_extrac
+             tor': False, 'default_search': None, 'ignore_config': None, 
+             'config_location': None, 'extract_flat': False, 'mark_watche
+             d': False, 'no_color': False, 'proxy': None, 'socket_timeout
+             ': None, 'source_address': None, 'geo_verification_proxy': N
+             one, 'cn_verification_proxy': None, 'geo_bypass': True, 'geo
+             _bypass_country': No...
+     self.__dict__ = {'update_self': None,
+                      'ignoreerrors': False,
+                      'dump_user_agent': False,
+                      'list_extractors': False,
+                      'list_extractor_descripti...: False,
+                      'force_generic_extractor': False,
+                      'default_search': None,
+                      'ignore_config': None,
+                      'config_location': None,
+                      'extract_flat': False,
+                      'mark_watched': False,
+                      'no_color': False,
+                      'proxy': None,
+                      'socket_timeout': None,
+                      'source_address': None,
+                      'geo_verification_proxy': None,
+                      'cn_verification_proxy': None,
+                      'geo_bypass': True,
+                      'geo_bypass_country': None,
+                      'g...
+    ..................................................
+
+---- (full traceback above) ----
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/evt_loader.py, line 242, in process_vs
+    ns = containers.process_dict(d,depth=depth) if not c else containers.process_dict(d,depth=depth,c=True)
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/evt_loader.py, line 132, in process_dict
+    new_v = process_vs(v,depth=depth,c=c)
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/evt_loader.py, line 207, in process_vs
+    f.write(str(v.__dict__))
+File /Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/optparse.py, line 80, in _repr
+    return "<%s at 0x%x: %s>" % (self.__class__.__name__, id(self), self)
+File /Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/optparse.py, line 831, in __str__
+    return str(self.__dict__)
+
+RecursionError: maximum recursion depth exceeded while getting the repr of an object================================================================================
+
+
+<class 'optparse.OptionGroup'>, cannot len this obj
+<optparse.OptionGroup object at 0x10736a970>
+
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/evt_loader.py, line 242, in process_vs
+    198  def process_vs(vs,depth=0,c=False):
+ (...)
+    238        else:
+    239          try:
+    240            if hasattr(v,'__dict__'):
+    241              d = v.__dict__
+--> 242              ns = containers.process_dict(d,depth=depth) if not c else containers.process_dict(d,depth=depth,c=True)
+    243              new_vs.append(ns)
+    ..................................................
+     vs = [<optparse.OptionGroup object at 0x113c45d90>, <optparse.Opt
+           ionGroup object at 0x1156f0220>, <optparse.OptionGroup objec
+           t at 0x1156f0340>, <optparse.OptionGroup object at 0x1156f04
+           90>, <optparse.OptionGroup object at 0x1156f0d60>, <optparse
+           .OptionGroup object at 0x1156fd7f0>, <optparse.OptionGroup o
+           bject at 0x1156fdc40>, <optparse.OptionGroup object at 0x115
+           6fd310>, <optparse.OptionGroup object at 0x1156fd130>, <optp
+           arse.OptionGroup object at 0x1156f0a60>, <optparse.OptionGro
+           up object at 0x1156f...
+     depth = 0
+     c = False
+     v = <optparse.OptionGroup object at 0x113c45d90>
+     d = {'parser': <optparse.OptionParser object at 0x113c45250>,
+          'option_list': [<Option at 0x113c45e50: -h/--help>, <Option
+           at 0x113c45d30: --version>, <Option at 0x113c45730: -U/--up
+          date>, <Option at 0x113c45a60: -i/--ignore-errors>, <Option 
+          at 0x113c450a0: --abort-on-error>, <Option at 0x113c45f10: -
+          -dump-user-agent>, <Option at 0x113c45280: --list-extractors
+          >, <Option at 0x113c45df0: --extractor-descriptions>, <Optio
+          n at 0x113c45f40: --force-generic-extractor>, <Option at 0x1
+          13c45130: --default-se...
+     v.__dict__ = {'parser': <optparse.OptionParser object at 0x113c45250>,
+                   'option_list': [<Option at 0x113c45e50: -h/--help>, <Option
+                    at 0x113c45d30: --version>, <Option at 0x113c45730: -U/--up
+                   date>, <Option at 0x113c45a60: -i/--ignore-errors>, <Option 
+                   at 0x113c450a0: --abort-on-error>, <Option at 0x113c45f10: -
+                   -dump-user-agent>, <Option at 0x113c45280: --list-extractors
+                   >, <Option at 0x113c45df0: --extractor-descriptions>, <Optio
+                   n at 0x113c45f40: --force-generic-extractor>, <Option at 0x1
+                   13c45130: --default-se...
+     containers.process_dict = <method 'Containers.process_dict' of <youtube_dl.evt_loader.
+                                Containers object at 0x11341d790> evt_loader.py:128>
+    ..................................................
+
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/evt_loader.py, line 132, in process_dict
+    128  def process_dict(self,dct,depth,c=False):
+    129    join_str = f",\n{' '*depth}"
+    130    new_d = {}
+    131    for k,v in dct.items():
+--> 132      new_v = process_vs(v,depth=depth,c=c)
+    133      new_d.update({k:new_v})
+    ..................................................
+     self = <youtube_dl.evt_loader.Containers object at 0x11341d790>
+     dct = {'parser': <optparse.OptionParser object at 0x113c45250>,
+            'option_list': [<Option at 0x113c45e50: -h/--help>, <Option
+             at 0x113c45d30: --version>, <Option at 0x113c45730: -U/--up
+            date>, <Option at 0x113c45a60: -i/--ignore-errors>, <Option 
+            at 0x113c450a0: --abort-on-error>, <Option at 0x113c45f10: -
+            -dump-user-agent>, <Option at 0x113c45280: --list-extractors
+            >, <Option at 0x113c45df0: --extractor-descriptions>, <Optio
+            n at 0x113c45f40: --force-generic-extractor>, <Option at 0x1
+            13c45130: --default-se...
+     depth = 0
+     c = False
+     join_str = ',\n'
+     new_d = {}
+     k = 'parser'
+     v = <optparse.OptionParser object at 0x113c45250>
+    ..................................................
+
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/evt_loader.py, line 207, in process_vs
+    198  def process_vs(vs,depth=0,c=False):
+ (...)
+    203      sv = repr(v)
+    204      if sv.startswith("<"):
+    205        with open('el205','a') as f:
+    206          f.write(sv)
+--> 207          f.write(str(v.__dict__))
+    208      if not v:
+    ..................................................
+     vs = [<optparse.OptionParser object at 0x113c45250>, ]
+     depth = 0
+     c = False
+     sv = '<optparse.OptionParser object at 0x113c45250>'
+     v = <optparse.OptionParser object at 0x113c45250>
+     f = <_io.TextIOWrapper name='el205' mode='a' encoding='UTF-8'>
+     v.__dict__ = {'option_list': [],
+                   'option_groups': [<optparse.OptionGroup object at 0x113c45d
+                   90>, <optparse.OptionGroup object at 0x1156f0220>, <optparse
+                   .OptionGroup object at 0x1156f0340>, <optparse.OptionGroup o
+                   bject at 0x1156f0490>, <optparse.OptionGroup object at 0x115
+                   6f0d60>, <optparse.OptionGroup object at 0x1156fd7f0>, <optp
+                   arse.OptionGroup object at 0x1156fdc40>, <optparse.OptionGro
+                   up object at 0x1156fd310>, <optparse.OptionGroup object at 0
+                   x1156fd130>, <optparse.OptionGroup object at 0x1156f0a60>, <
+                   ...
+    ..................................................
+
+File /Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/optparse.py, line 80, in _repr
+    79   def _repr(self):
+--> 80       return "<%s at 0x%x: %s>" % (self.__class__.__name__, id(self), self)
+    ..................................................
+     self = <Values at 0x11570e130: {'update_self': None, 'ignoreerrors'
+             : False, 'dump_user_agent': False, 'list_extractors': False,
+              'list_extractor_descriptions': False, 'force_generic_extrac
+             tor': False, 'default_search': None, 'ignore_config': None, 
+             'config_location': None, 'extract_flat': False, 'mark_watche
+             d': False, 'no_color': False, 'proxy': None, 'socket_timeout
+             ': None, 'source_address': None, 'geo_verification_proxy': N
+             one, 'cn_verification_proxy': None, 'geo_bypass': True, 'geo
+             _bypass_country': No...
+     self.__class__.__name__ = 'Values'
+    ..................................................
+
+File /Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/optparse.py, line 831, in __str__
+    830  def __str__(self):
+--> 831      return str(self.__dict__)
+    ..................................................
+     self = <Values at 0x11570e130: {'update_self': None, 'ignoreerrors'
+             : False, 'dump_user_agent': False, 'list_extractors': False,
+              'list_extractor_descriptions': False, 'force_generic_extrac
+             tor': False, 'default_search': None, 'ignore_config': None, 
+             'config_location': None, 'extract_flat': False, 'mark_watche
+             d': False, 'no_color': False, 'proxy': None, 'socket_timeout
+             ': None, 'source_address': None, 'geo_verification_proxy': N
+             one, 'cn_verification_proxy': None, 'geo_bypass': True, 'geo
+             _bypass_country': No...
+     self.__dict__ = {'update_self': None,
+                      'ignoreerrors': False,
+                      'dump_user_agent': False,
+                      'list_extractors': False,
+                      'list_extractor_descripti...: False,
+                      'force_generic_extractor': False,
+                      'default_search': None,
+                      'ignore_config': None,
+                      'config_location': None,/Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/evt_loader.py
+                      'extract_flat': False,
+                      'mark_watched': False,
+                      'no_color': False,
+                      'proxy': None,
+                      'socket_timeout': None,
+                      'source_address': None,
+                      'geo_verification_proxy': None,
+                      'cn_verification_proxy': None,
+                      'geo_bypass': True,
+                      'geo_bypass_country': None,
+                      'g...
+    ..................................................
+
+---- (full traceback above) ----
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/evt_loader.py, line 242, in process_vs
+    ns = containers.process_dict(d,depth=depth) if not c else containers.process_dict(d,depth=depth,c=True)
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/evt_loader.py, line 132, in process_dict
+    new_v = process_vs(v,depth=depth,c=c)
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/evt_loader.py, line 207, in process_vs
+    f.write(str(v.__dict__))
+File /Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/optparse.py, line 80, in _repr
+    return "<%s at 0x%x: %s>" % (self.__class__.__name__, id(self), self)
+File /Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/optparse.py, line 831, in __str__
+    return str(self.__dict__)
+
+RecursionError: maximum recursion depth exceeded while getting the repr of an object================================================================================
+
+
+<class 'optparse.OptionGroup'>, cannot len this obj
+<optparse.OptionGroup object at 0x113c45d90>
+

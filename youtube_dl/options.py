@@ -18,7 +18,7 @@ from .utils import (
     write_string,
 )
 from .version import __version__
-from pdb import set_trace as st
+
 
 def _hide_login_info(opts):
     PRIVATE_OPTS = set(['-p', '--password', '-u', '--username', '--video-password', '--ap-password', '--ap-username'])

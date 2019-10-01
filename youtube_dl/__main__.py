@@ -25,20 +25,29 @@ import pickle, sys
 test = True
 
 if __name__ == '__main__':
-  if test:
-    qc = QueryConfig()
-    qcfg = [qc.eventpickle()]#,qc.noloop()]
-    tracer = Tracer()
-    for query,actions,outputs,filenames,write_func,epdf_pklpth in qcfg:
-      tracer.trace(query)
-      youtube_dl.main()
-      # write_func()
-      action = actions[0]
-      evts_dcts = action.get_evt_dcts()
-      with open('evts_dcts.pkl','wb') as f:
-        pickle.dump(action.evt_dcts,f,pickle.HIGHEST_PROTOCOL)
-      with open('evts_dcts.pkl','rb') as f:
-        evts_dcts = pickle.load(f)
-
-  else:
-    youtube_dl.main()
+  qc = QueryConfig()
+  qcfg = qc.eventpickle()
+  tracer = Tracer()
+  query,actions,outputs,filenames,write_func,epdf_pklpth = qcfg
+  filename = filenames[0]
+  action = actions[0]
+  output = io.StringIO()
+  action._stream = output
+  tracer.trace(query)
+  try:
+    retval = youtube_dl.main()
+  except SystemExit as exc:
+    tb1 = stackprinter.format(exc)
+    try:
+      tracer.stop()
+      outval = output.getvalue()
+      output.close()
+      with open(outvalpth:=filename.parent.joinpath('output.log'),'w') as f:
+        f.write(outval)
+      print(f"wrote output value to {outvalpth}")
+    except BaseException as exc:
+      tb2 = stackprinter.format(exc)
+      with open('tb.log','w') as f:
+        f.write(tb1)
+        f.write(tb2)
+      print("failed")

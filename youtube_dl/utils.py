@@ -2620,7 +2620,6 @@ class YoutubeDLHandler(compat_urllib_request.HTTPHandler):
                     try:
                         gz = gzip.GzipFile(fileobj=io.BytesIO(content[:-i]), mode='rb')
                         uncompressed = io.BytesIO(gz.read())
-                        print(f"3. {io.BytesIO(content[:-i])=}\n{gz=}\n{uncompressed=}")
                     except IOError:
                         continue
                     break

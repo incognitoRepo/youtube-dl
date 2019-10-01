@@ -1,33 +1,55 @@
 #// vscode-fold=1
-import hunter
-import re
-import os
-from functools import singledispatchmethod
+"""python imports
+pwd = '/Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/bin'
+# adding the following should make the import work in any pwd
+p = '/Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/bin'
+sys.path.append(p)
+import fmtutil
+"""
+import hunter, re, os, types, sys, shelve
+from ast import literal_eval as leval
+from itertools import count
+from functools import singledispatchmethod, cached_property
 from typing import List, Dict, Iterable, Union
-from hunter import Q, Query
+from hunter import Q, Query, Event
 from hunter.predicates import And, When
 from hunter.actions import CallPrinter, CodePrinter, VarsPrinter, VarsSnooper, CALL_COLORS, MISSING
 import io,threading
-from collections import namedtuple, defaultdict
+from collections import namedtuple, defaultdict, deque
 from functools import partial
 from fsplit.filesplit import FileSplit
 from pathlib import Path
 from tblib import Traceback
 import pandas as pd
-import pickle, sys
+from copy import deepcopy
+import hickle as pickle
 import traceback
 from enum import Enum
 from pdb import set_trace as st
 from dataclasses import dataclass, field, InitVar
+from prettyprinter import cpprint, pprint
+from pygments import highlight
+from pygments.lexers import PythonLexer
+from pygments.formatters import Terminal256Formatter
+from youtube_dl.constants import Color
+from prettyprinter import pprint
+from urllib.parse import urlparse, ParseResult
+from pprint import pformat
+from hunter.util import safe_repr
+from youtube_dl.evt_loader import process_dcts, process_vs
+DEBUG = "dbg_cfg_ret.log"
 
 @dataclass
 class EventKind:
   event: InitVar
   event_kind: str = field(init=False)
   event_function: str = field(init=False)
-  filename_prefix: str
+  filename_prefix_mono: str
+  filename_prefix_poly: str
   stack: int
+  fmtdstr: str = ""
   argvars: Dict = field(default_factory=dict)
+  color: Color = Color()
 
   def get_argvars(self,event):
     """event.arg from sys.settrace(tracefunc)
@@ -51,139 +73,330 @@ class EventKind:
 class CallEvent(EventKind):
   symbol: str = "=>"
   separator: str = "   "
+  _first:str = ""
+  _rest: str = ""
 
-  def get_argvars(self,event):
+  def get_argvars(self,event) -> Dict:
     varnames = event.code.co_varnames
     argcount = event.code.co_argcount
-    avs = {}
+    d = {}
     for var in varnames:
-      try:
-        val = str(event.locals.get(var))
-      except AttributeError:
-        val = repr(event.locals.get(var))
-      except:
-        val = 'error'
-      avs.update({var:val})
-    self.argvars = avs
-    return
+      val = str(event.locals.get(var))
+      d = {var:val}
+    return d
+
+  def fmtd_str(self,c=False,prefix_symbol=""):
+    psym = prefix_symbol
+    ms1 = (
+        f"{self.filename_prefix_mono}{self.event_kind:9} "
+        f"{self.separator * (len(self.stack) - 1)}{self.symbol} "
+        f"{self.event_function}"
+    )
+    lms1 = len(ms1)+len("(")
+    join_mstr = f",\n{' '*lms1}"
+    mavs = (
+        f"({join_mstr.join([f'{k}={v}' for k,v in self.argvars.items()])})"
+    )
+    if self._first and self._rest:
+      first,rest = self._first,self._rest
+    else:
+      first,*rest = mavs.split('\n',1)
+      self._first,self._rest = first,rest
+    ms = f"{psym}{ms1}{mavs}"
+    if c:
+      aac = argvars_argname_color = "MAGENTA"
+      ps1 = (
+          f"{self.filename_prefix_poly}{self.color.fore(f'{self.event_kind:9}','KIND')} "
+          f"{self.separator * (len(self.stack) - 1)}{self.color.fore(self.symbol,'CALL')} "
+          f"{self.event_function}"
+      )
+      lps1 = lms1
+      join_pstr = f",\n{' '*lps1}"
+      pavs = (
+        f"({join_pstr.join([f'{self.color.fore(k,aac)}={v}' for k,v in self.argvars.items()])})"
+      )
+      ps = f"{psym}{ps1}{pavs}"
+      return ps
+    return ms
 
   def __str__(self):
-    s = (
-        f"{self.filename_prefix}{self.event_kind:9} "
-        f"{self.separator * (len(self.stack) - 1)}{self.symbol} "
-        f"{self.event_function}({self.argvars})"
-    )
-    return s
+    if not self.fmtdstr:
+      self.fmtdstr = self.fmtd_str()
+      return self.fmtdstr
+    else:
+      return self.fmtdstr
 
 @dataclass
 class ExceptionEvent(EventKind):
   symbol: str = " !"
   separator: str = "   "
 
-  def get_argvars(self,event):
+  def get_argvars(self,event) -> Dict:
     """event.arg from sys.settrace(tracefunc)
     ..exception: `(exception, value, traceback)`
                : `(type, value, traceback)`
-               : `(exception_class, instance, traceback)`
+               : `(exception_class, instance, traceback)` # this is tb.print_tb() str
     """
-    d = {
-      "exception": event.arg[0],
-      "value": event.arg[1],
-      "traceback": event.arg[2]
-    }
-    self.argvars = d
-    return
+    assert isinstance(event.arg,dict), type(event.arg)
+    assert len(event.arg) == 3, f"{type(event.arg)=}, {len(event.arg)=}\n{event.arg=}"
+    # event.arg.keys() ["exception","value","traceback"]
+    return event.arg
+
+  def fmtd_str(self,c=False,prefix_symbol=""):
+    psym = prefix_symbol
+    ms1 = (
+        f"{self.filename_prefix_mono}{self.event_kind:9} "
+        f"{self.separator * (len(self.stack) - 1)}{self.symbol} "
+        f"{self.event_function}"
+    )
+    lms1 = len(ms1)+len("(")
+    join_mstr = f",\n{'+'*lms1}"
+    mavs = (
+        f"({join_mstr.join(traceback.format_exception_only(self.argvars['exception'],self.argvars['value'])).strip()})"
+    )
+    ms = f"{psym}{ms1}{mavs}"
+    if c:
+      aac = argvars_argname_color = "MAGENTA"
+      ps1 = (
+          f"{self.filename_prefix_poly}{self.color.fore(f'{self.event_kind:9}','KIND')} "
+          f"{self.separator * (len(self.stack) - 1)}{self.color.fore(self.symbol,'EXCEPTION')} "
+          f"{self.event_function}"
+      )
+      lps1 = lms1
+      join_pstr = f",\n{' '*lps1}"
+      pavs = (
+        f"({join_pstr.join(traceback.format_exception_only(self.argvars['exception'],self.argvars['value'])).strip()})"
+      )
+      ps = f"{psym}{ps1}{pavs}"
+      return ps
+    return ms
 
   def __str__(self):
-    s = (
-      f"{self.filename_prefix}{self.event_kind:9} "
-      f"{self.separator * (len(self.stack) - 1)} "
-      f"{self.event_function}: "
-      f"{self.argvars}\n"
-    )
-    return s
+    if not self.fmtdstr:
+      self.fmtdstr = self.fmtd_str()
+      return self.fmtdstr
+    else:
+      return self.fmtdstr
 
 @dataclass
 class ReturnEvent(EventKind):
   symbol: str = "<="
   separator: str = "   "
+  debug: bool = True
 
-  def get_argvars(self,event):
+  def get_argvars(self,event) -> Dict:
     """event.arg from sys.settrace(tracefunc)
     ..return: `retval` or `None` (if exc)
     """
     if not event.arg:
-      self.argvars = None
+      d = {"retval":"None"}
     elif isinstance(event.arg,str):
-      try:
-        self.argvars = str(event.arg)
-      except:
-        self.argvars = repr(event.arg)
+      d = {"retval": [repr(event.arg)]}
     elif isinstance(event.arg,Iterable):
       if isinstance(event.arg,Dict):
-        try:
-          self.argvars = {k:str(v) for k,v in event.arg}
-        except:
-          self.argvars = {k:repr(v) for k,v in event.arg}
+        d = {k:[repr(v)] for k,v in event.arg.items()}
       elif isinstance(event.arg,List):
-        try:
-          self.argvars = [str(elm) for elm in event.arg]
-        except:
-          self.argvars = [repr(elm) for elm in event.arg]
+        d = self.argvars = {"retval": [repr(elm) for elm in event.arg]}
+      else:
+        d = {'retval': event.arg}
     else:
-      self.argvars = "else"
-    return
+      d = {"retval":["else_error"]}
+    return d
+
+  def implies_iterable_is_str_len1(self,v):
+    if (v[0] in ("{","[","(")
+        and isinstance(v[0],str)
+        and len(v) > 1
+        and len(v[0]) == 1):
+      return True
+    else:
+      return False
+
+  def fmtd_str(self,c=False,prefix_symbol=""):
+    typ = lambda o: type(o).__name__
+
+    def is_url(url):
+      try:
+        result = urlparse(url)
+        return all([result.scheme, result.netloc])
+      except ValueError:
+        return False
+
+    psym = prefix_symbol
+    j = lambda lst: "\n".join(lst)
+    rm_rq = lambda s: s.replace("'","") # remove redundant quotes
+    vl = list(self.argvars.values())[0]
+    ts,ts0 = set(),set()
+    if not vl or vl == "None": return "()"
+    vl = [rm_rq(elm).strip() for elm in vl]
+    rest, restl = "",[]
+    ms1 = (
+        f"{self.filename_prefix_mono}{self.event_kind:9} "
+        f"{self.separator * (len(self.stack) - 1)}{self.symbol} "
+        f"{self.event_function}"
+    )
+    lms1 = len(ms1.strip())+1 # fmt:375 strip is opt
+    def get_lms1(newline,debug_separator):
+      nl = "\n" if newline else ""
+      sep = ' ' if not self.debug else debug_separator
+      s = f"{nl}{sep*lms1}"
+      return s
+    join_mstr = f",\n{' '*lms1}"
+    assert isinstance(join_mstr,str), join_mstr
+    ms2 = f"{self.event_function}"
+
+
+    vlst = []
+    first = True
+    for k,v in self.argvars.items():
+      l = v
+      fv = None
+      assert isinstance(l,list), f"{l=}"
+      l0 = l[0]
+      if isinstance(l0,str) and l0.lower() in ('true','false'): # bool
+        if l0.lower() == 'true':
+          fv = True
+        else:
+          fv = False
+      elif len(l) > 10:
+        fv = l
+      elif isinstance(l0,list):
+        fv = eval(l0)
+      elif "," not in l0: # not container
+        if l0.isnumeric():
+          fv = int(l0)
+        elif is_url(l0):
+          fv = urlparse(l0).geturl()
+        elif isinstance(l0,ParseResult):
+          fv = urlparse(l0).geturl()
+        elif not l0:
+          fv = "()"
+        else:
+          fv = l0
+      else:
+        try:
+          fv = eval(l0)
+        except:
+          fv = l0
+
+      if isinstance(fv,list) and isinstance(fv[0],str) and (len(fv) > 5):
+        pfv = ""
+        f_flag = True
+        for elm in fv:
+          if f_flag:
+            pfv += elm
+            f_flag = False
+          else:
+            pfv += get_lms1(False,'1') + elm
+      elif isinstance(fv,list):
+        l = []
+        pfv = ""
+        f_flag = True
+        if isinstance(fv[0],dict):
+          d = fv[0]
+          for vk,vv in d.items():
+            if f_flag:
+              itm = get_lms1(False,'2') + vk + ": " + str(vv)
+              l.append(itm)
+            else:
+              itm = get_lms1(False,'3') + vk + ": " + str(vv)
+              l.append(itm)
+          pfv =  "\n".join(l)
+        else:
+          pfv = get_lms1(True,'4') + k + ": " + str(fv)
+
+      elif isinstance(fv,dict):
+        splt = pformat(fv).split('\n')
+        pfv = ""
+        for line in splt:
+          if first:
+            pfv = k + ": " + str(fv)
+            first = False
+          else:
+            pfv += get_lms1(True,'5') + k + ": " + line
+      else:
+        if isinstance(fv,bool) or isinstance(fv,int):
+          if first:
+            pfv = k + ": " + str(fv)
+            first = False
+          else:
+            pfv = get_lms1(False,'6') + k + ": " + str(fv)
+        else:
+          if first:
+            pfv = k + ": " + pformat(fv)
+            first = False
+          else:
+            pfv = get_lms1(False,'7') + k + ": " + pformat(fv)
+      vlst.append(pfv)
+    mavs = "\n".join(vlst)
+    mavs = "(" + mavs + ")"
+
+
+    restj = f"{ms1}{mavs}"
+    ms = f"{psym}{restj}"
+    if c:
+      return ms
+    return ms
 
   def __str__(self):
-    s = (
-      f"{self.filename_prefix}{self.event_kind:9} "
-      f"{self.separator  * (len(self.stack) - 1)}{self.symbol} "
-      f"{self.event_function}: {self.argvars}\n"
-    )
-    return s
+    if not self.fmtdstr:
+      self.fmtdstr = self.fmtd_str()
+      return self.fmtdstr
+    else:
+      return self.fmtdstr
 
 @dataclass
 class LineEvent(EventKind):
   symbol: str = "<="
   separator: str = "   "
 
-  def get_argvars(self, event):
+  def get_argvars(self, event) -> Dict:
     sauce = str(event.fullsource)
-    self.argvars = sauce
-    return
+    sauce = sauce.strip()
+    d = {"line_source":[sauce]}
+    return d
+
+  def fmtd_str(self,c=False,prefix_symbol=""):
+    """this is ugly code. i moved the fmt_syms into these classes bc
+    i needed the secondary idt, but for line events, there are never
+    secondary idts (these multiline rows are for verbose argvars)
+    otoh, line events have a unique feature that they use the 1st line as a
+    header line, so the sym is different and there is a scondary idt for adjacent.
+    if this works, i will keep it like this until i can get a mvp."""
+    psym = prefix_symbol
+    ms1 = (
+        f"{self.filename_prefix_mono}{self.event_kind:9} "
+        f"{self.separator * len(self.stack)} "
+    )
+    lms1 = len(ms1)+len("(")
+    join_mstr = f",\n{' '*lms1}"
+    mavs = (
+        f"{self.argvars}"
+    )
+    ms = f"{psym}{ms1}{mavs}"
+    if c:
+      aac = argvars_argname_color = "MAGENTA"
+      ps1 = (
+          f"{self.filename_prefix_poly}{self.color.fore(f'{self.event_kind:9}','KIND')} "
+          f"{self.separator * len(self.stack)} "
+      )
+      lps1 = lms1
+      join_pstr = f",\n{' '*lps1}"
+      pavs = (
+        f"{self.argvars}"
+      )
+      ps = f"{psym}{ps1}{pavs}"
+      return ps
+    return ms
 
   def __str__(self):
-    s = (
-      f"{self.filename_prefix}{self.event_kind:9} "
-      f"{self.separator * len(self.stack)}"
-      f"{self.argvars}\n"
-    )
-    return s
-
-def update_evt_dct(evt_dct, event, filename_prefix, stack, output):
-  d = {'call': CallEvent, 'line': LineEvent,
-  'return': ReturnEvent, 'exception': ExceptionEvent}
-  hntr_evt = d[event.kind](event,filename_prefix,stack)
-  evt_dct['hunter_event'] = hntr_evt
-  evt_dct['hunter_monostr'] = str(hntr_evt)
-  evt_dct['hunter_polystr'] = output
-  return evt_dct
+    if not self.fmtdstr:
+      self.fmtdstr = self.fmtd_str()
+      return self.fmtdstr
+    else:
+      return self.fmtdstr
 
 class CustomPrinter(CallPrinter):
-  """
-  An action that just prints the code being executed, but unlike :obj:`hunter.CodePrinter` it indents based on
-  callstack depth and it also shows ``repr()`` of function arguments.
-
-  Args:
-    stream (file-like): Stream to write to. Default: ``sys.stderr``.
-    filename_alignment (int): Default size for the filename column (files are right-aligned). Default: ``40``.
-    force_colors (bool): Force coloring. Default: ``False``.
-    repr_limit (bool): Limit length of ``repr()`` output. Default: ``512``.
-    repr_func (string or callable): Function to use instead of ``repr``.
-      If string must be one of 'repr' or 'safe_repr'. Default: ``'safe_repr'``.
-
-  .. versionadded:: 1.2.0
-  """
   EVENT_COLORS = CALL_COLORS
 
   def __init__(self, *args, **kwargs):
@@ -191,8 +404,25 @@ class CustomPrinter(CallPrinter):
     self.locals = defaultdict(list)
     self.count = count(0)
     self.evt_dcts = []
+    self.debugfilepth = Path('/Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/bin/debug.log')
+    self.pklpth = Path('/Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/bin/eventpickle/evtdcts_pklpth.pkl')
+    self.pklpth2 = Path('/Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/bin/eventpickle')
+    self.pklcnt = count()
+    self.old_fn = ""
 
-  def filename_prefix(self, event=None):
+  def write_to_debugfile(self,f,f2,f3,frv):
+    s = (
+      f"f: {f}",
+      f"f2: {f2}",
+      f"f3: {f3}",
+      f"frv: {frv}",
+    )
+    sj = "\n".join(s)
+    with open(self.debugfilepth,'a') as f:
+      f.write(sj+"\n\n")
+
+  def filename_prefix(self, event=None, count=None):
+    og_index = f"{count:0>5}"
     if event:
       filename = Path(event.filename) or '<???>'
       if filename.stem == "init":
@@ -200,10 +430,20 @@ class CustomPrinter(CallPrinter):
       else:
         filename2 = f"{filename.stem}"
       filename3 = filename2[:self.filename_alignment]
-      return '{:>{}}{COLON}:{LINENO}{:<5} '.format(
-        filename3, self.filename_alignment, event.lineno, **self.other_colors)
+
+      ms = (
+        f"{filename3:_>{self.filename_alignment}}:"
+        f"({event.lineno:0>5}|{og_index})"
+      )
+      ps = (
+        f"{filename3:_>{self.filename_alignment}}{self.other_colors['COLON']}:"
+        f"({self.other_colors['LINENO']}{event.lineno:0>5}|{og_index})"
+      )
+      return ms,ps
     else:
-      return '{:>{}}       '.format('', self.filename_alignment)
+      print('error in filename_prefix')
+      st()
+      assert 1/0, 'wtf'
 
   def output_format(self, format_str, *args, **kwargs):
     output = (format_str.format(
@@ -245,27 +485,277 @@ class CustomPrinter(CallPrinter):
     'lineno':e.lineno,
     # 'locals':e.locals,
     'module':e.module,
-    'source':e.source
+    # 'source':e.source
     }
     return d
 
+  def update_evt_dct(self,evt_dct,event,filename_prefix_mono,filename_prefix_poly,stack,output):
+    d = {'call': CallEvent, 'line': LineEvent,
+    'return': ReturnEvent, 'exception': ExceptionEvent}
+    hntr_evt = d[event.kind](event,filename_prefix_mono,filename_prefix_poly,stack)
+    evt_dct['hunter_event'] = hntr_evt
+    evt_dct['hunter_monostr'] = hntr_evt.fmtd_str(c=False)
+    evt_dct['hunter_polystr'] = hntr_evt.fmtd_str(c=True)
+    evt_dct['hunter_raw_output'] = output
+    return evt_dct
+
+  def event_detach(self,og_event,d=None):
+    event = Event.__new__(Event)
+
+    event.__dict__['code'] = og_event.code
+    event.__dict__['filename'] = og_event.filename
+    event.__dict__['fullsource'] = og_event.fullsource
+    event.__dict__['function'] = og_event.function
+    event.__dict__['lineno'] = og_event.lineno
+    event.__dict__['module'] = og_event.module
+    event.__dict__['source'] = og_event.source
+    event.__dict__['stdlib'] = og_event.stdlib
+    event.__dict__['threadid'] = og_event.threadid
+    event.__dict__['threadname'] = og_event.threadname
+
+    if d:
+      keys = list(d.keys())
+      if 'arg' in keys:
+        event.__dict__['arg'] = d['arg'](og_event.arg)
+      else:
+        event.__dict__['arg'] = {}
+      if 'globals' in keys:
+        event.__dict__['globals'] = {key: d['globals'](value) for key, value in og_event.globals.items()}
+      else:
+        event.__dict__['globals'] = {}
+      if 'locals' in keys:
+        event.__dict__['locals'] = {key: d['locals'](value) for key, value in og_event.locals.items()}
+      else:
+        event.__dict__['locals'] = None
+
+    else:
+      event.__dict__['globals'] = {}
+      event.__dict__['locals'] = {}
+      event.__dict__['arg'] = None
+
+    event.threading_support = og_event.threading_support
+    event.calls = og_event.calls
+    event.depth = og_event.depth
+    event.kind = og_event.kind
+    event.detached = True
+    return event
+
+  def process_event_arg_BAK(self,a):
+    if isinstance(a,tuple) and isinstance(a[1],BaseException):
+      d = {
+        'exception': deepcopy(a[0]),
+        'value': deepcopy(a[1]),
+        'traceback': traceback.format_tb(a[2])
+      }
+      return d
+    elif isinstance(a,dict):
+      d = {}
+      for k,v in a.items():
+        if isinstance(v,dict):
+          nv = {vk:str(vv) for vk,vv in v.items()}
+        else:
+          nv = str(v)
+        d.update({k:nv})
+      return d
+    elif isinstance(a,list):
+      l = []
+      for elm in a:
+        if isinstance(elm,str):
+          l.append(elm)
+        else:
+          l.append(repr(elm))
+      return l
+    else:
+      return repr(a)
+
+  def process_event_arg(self,a):
+    if not a:
+      return
+    if str(a).startswith("<Values"):
+      lod = [a.__dict__]
+      prcsd = process_dcts(lod)
+    if isinstance(a,dict) and (
+      isinstance(list(a.values())[0],dict)):
+      lod = list(a.values())
+      prcsd = process_dcts(lod)
+    if not isinstance(a,list) or isinstance(a,tuple):
+      if not isinstance(a,dict):
+        d = {'process_event_arg':a}
+        lod = [d]
+        prcsd = process_dcts(lod)
+      else:
+        lod = [a]
+        prcsd = process_dcts(lod)
+    else:
+      prcsd = process_vs(a)
+    return prcsd
+
+  def append_evtdct_to_pickle(self,edct):
+    n = next(self.pklcnt)
+    if not edct:
+      return
+    elif n == 0 or n == 4000:
+      filename = self.pklpth2.joinpath(f'evtdcts_pklpth{n}.db')
+      self.old_fn = filename
+    else:
+      filename = self.old_fn
+    try:
+      with shelve.open(filename) as s:
+        flag = 'evt_dcts' in s
+        if flag:
+          evt_dcts = s['evt_dcts']
+          evt_dcts.append(edct['og_arg'])
+          s['evt_dcts'] = evt_dcts
+        else:
+          s['evt_dcts'] = [edct['og_arg']]
+    except:
+      with open('error612','w') as f:
+        f.write(repr(edct))
+
   def __call__(self, event):
-    live_event = event
-    event = event.detach(value_filter=lambda value: self.try_repr(value))
+    count = next(self.count)
+    og_arg = self.process_event_arg(event.arg)
+    arg = self.process_event_arg_BAK(event.arg)
+
     ident = event.module, event.function
 
     thread = threading.current_thread()
     stack = self.locals[thread.ident]
 
     pid_prefix = self.pid_prefix()
-    thread_prefix = self.thread_prefix(live_event)
-    filename_prefix = self.filename_prefix(live_event)
-    evt_dct = self.event_dict(event,next(self.count))
+    thread_prefix = self.thread_prefix(event)
+    filename_prefix_mono,filename_prefix_poly = self.filename_prefix(event,count)
+    evt_dct = self.event_dict(event,count)
     if event.kind == 'call':
       # :event.arg: None = None
       code = event.code
       stack.append(ident)
       output = self.output_format(
+        '{}{KIND}{:9} {}{COLOR}=>{NORMAL} {}({}{COLOR}{NORMAL}){RESET}\n',
+        # pid_prefix,
+        # thread_prefix,
+        filename_prefix_poly,
+        event.kind,
+        '   ' * (len(stack) - 1),
+        event.function,
+        ', '.join('{VARS}{VARS-NAME}{0}{VARS}={RESET}{1}'.format(
+          var,
+          event.locals.get(var, MISSING) if event.detached else self.try_repr(event.locals.get(var, MISSING)),
+          **self.other_colors
+        ) for var in code.co_varnames[:code.co_argcount]),
+        COLOR=self.event_colors.get(event.kind),
+      )
+      # evt_dct = self.update_evt_dct(
+       #    evt_dct,
+       #    event,
+       #    filename_prefix_mono,
+       #    filename_prefix_poly,
+       #    stack,
+       #    output
+       #  )
+      self.append_evtdct_to_pickle(og_arg)
+      # self.evt_dcts.append(evt_dct)
+      self.write_output(output)
+    elif event.kind == 'exception':
+      # :event.arg: tuple = (exception, value, traceback)
+      output = self.output_format(
+        '{}{KIND}{:9} {}{COLOR} !{NORMAL} {}: {RESET}{}\n',
+        # pid_prefix,
+        # thread_prefix,
+        filename_prefix_poly,
+        event.kind,
+        '   ' * (len(stack) - 1),
+        event.function,
+        event.arg if event.detached else self.try_repr(event.arg),
+        COLOR=self.event_colors.get(event.kind),
+      )
+      # evt_dct = self.update_evt_dct(
+        #   evt_dct,
+        #   event,
+        #   filename_prefix_mono,
+        #   filename_prefix_poly,
+        #   stack,
+        #   output
+        # )
+      self.append_evtdct_to_pickle(og_arg)
+      # self.evt_dcts.append(evt_dct)
+      self.write_output(output)
+    elif event.kind == 'return':
+      # :event.arg: = return value or `None` if exception
+      output = self.output_format(
+        '{}{KIND}{:9} {}{COLOR}<={NORMAL} {}: {RESET}{}\n',
+        # pid_prefix,
+        # thread_prefix,
+        filename_prefix_poly,
+        event.kind,
+        '   ' * (len(stack) - 1),
+        event.function,
+        event.arg if event.detached else self.try_repr(event.arg),
+        COLOR=self.event_colors.get(event.kind),
+      )
+      # evt_arg = {k:str(v) for k,v in live_event.arg}
+      # event.arg = evt_arg
+      # evt_dct = self.update_evt_dct(
+        #   evt_dct,
+        #   event,
+        #   filename_prefix_mono,
+        #   filename_prefix_poly,
+        #   stack,
+        #   output
+        # )
+      self.append_evtdct_to_pickle(og_arg)
+      # self.evt_dcts.append(evt_dct)
+      self.write_output(output)
+      if stack and stack[-1] == ident:
+        stack.pop()
+    else:
+      # :event.arg: = `None`
+      output = self.output_format(
+        '{}{KIND}{:9} {RESET}{}{}{RESET}\n',
+        # pid_prefix,
+        # thread_prefix,
+        filename_prefix_poly,
+        event.kind,
+        '   ' * len(stack),
+        self.try_source(event).strip(),
+      )
+      # evt_dct = self.update_evt_dct(
+        #   evt_dct,
+        #   event,
+        #   filename_prefix_mono,
+        #   filename_prefix_poly,
+        #   stack,
+        #   output
+        # )
+      self.append_evtdct_to_pickle(og_arg)
+      # self.evt_dcts.append(evt_dct)
+      self.write_output(output)
+
+class CallPrinter2(CallPrinter):
+  EVENT_COLORS = CALL_COLORS
+
+  def __init__(self, *args, **kwargs):
+    super(CallPrinter2, self).__init__(*args, **kwargs)
+    self.locals = defaultdict(list)
+
+  def __call__(self, event):
+    """
+    Handle event and print filename, line number and source code. If event.kind is a `return` or `exception` also
+    prints values.
+    """
+    ident = event.module, event.function
+
+    thread = threading.current_thread()
+    stack = self.locals[thread.ident]
+
+    pid_prefix = self.pid_prefix()
+    thread_prefix = self.thread_prefix(event)
+    filename_prefix = self.filename_prefix(event)
+
+    if event.kind == 'call':
+      code = event.code
+      stack.append(ident)
+      self.output(
         '{}{}{}{KIND}{:9} {}{COLOR}=>{NORMAL} {}({}{COLOR}{NORMAL}){RESET}\n',
         pid_prefix,
         thread_prefix,
@@ -279,13 +769,9 @@ class CustomPrinter(CallPrinter):
           **self.other_colors
         ) for var in code.co_varnames[:code.co_argcount]),
         COLOR=self.event_colors.get(event.kind),
-      )
-      evt_dct = update_evt_dct(evt_dct,event,filename_prefix,stack,output)
-      self.evt_dcts.append(evt_dct)
-      self.write_output(output)
+        )
     elif event.kind == 'exception':
-      # :event.arg: tuple = (exception, value, traceback)
-      output = self.output_format(
+      self.output(
         '{}{}{}{KIND}{:9} {}{COLOR} !{NORMAL} {}: {RESET}{}\n',
         pid_prefix,
         thread_prefix,
@@ -296,13 +782,9 @@ class CustomPrinter(CallPrinter):
         event.arg if event.detached else self.try_repr(event.arg),
         COLOR=self.event_colors.get(event.kind),
       )
-      evt_dct = update_evt_dct(evt_dct,event,filename_prefix, stack, output)
-      self.evt_dcts.append(evt_dct)
-      self.write_output(output)
 
     elif event.kind == 'return':
-      # :event.arg: = return value or `None` if exception
-      output = self.output_format(
+      self.output(
         '{}{}{}{KIND}{:9} {}{COLOR}<={NORMAL} {}: {RESET}{}\n',
         pid_prefix,
         thread_prefix,
@@ -310,17 +792,14 @@ class CustomPrinter(CallPrinter):
         event.kind,
         '   ' * (len(stack) - 1),
         event.function,
-        event.arg if event.detached else self.try_repr(event.arg),
+        # event.arg if event.detached else self.try_repr(event.arg),
+        self.try_repr(event.arg),
         COLOR=self.event_colors.get(event.kind),
       )
-      evt_dct = update_evt_dct(evt_dct, event,filename_prefix, stack, output)
-      self.evt_dcts.append(evt_dct)
-      self.write_output(output)
       if stack and stack[-1] == ident:
         stack.pop()
     else:
-      # :event.arg: = `None`
-      output = self.output_format(
+      self.output(
         '{}{}{}{KIND}{:9} {RESET}{}{}{RESET}\n',
         pid_prefix,
         thread_prefix,
@@ -329,29 +808,8 @@ class CustomPrinter(CallPrinter):
         '   ' * len(stack),
         self.try_source(event).strip(),
       )
-      evt_dct = update_evt_dct(evt_dct, event,filename_prefix, stack, output)
-      self.evt_dcts.append(evt_dct)
-      self.write_output(output)
 
-def patched_filename_prefix2(self, event=None):
-  if event:
-    filepath = Path(event.filename) or '<???>'
-    filename = filepath.stem
-  if filename.startswith("__init__"):
-    filename = f"{filepath.parts[-2][0]}.{filename}"
-  if filename.startswith("microsoft"):
-    filename = "ms_vac"
-  self.filename_alignment = 26
-  if len(filename) > self.filename_alignment:
-    filename = '[...]{}'.format(filename[5 - self.filename_alignment:])
-    return '{:>{}}{COLON}:{LINENO}{:<5} '.format(
-        filename, self.filename_alignment, event.lineno, **self.other_colors)
-  else:
-   return '{:>{}}       '.format('', self.filename_alignment)
-
-
-
-def safe_deep_repr(obj, maxdepth=10):
+def safe_repr(obj, maxdepth=5):
   if not maxdepth:
     return '...'
   obj_type = type(obj)
@@ -359,138 +817,124 @@ def safe_deep_repr(obj, maxdepth=10):
 
   # specifically handle few of the container builtins that would normally do repr on contained values
   if isinstance(obj, dict):
-      if obj_type is not dict:
-          return '%s({%s})' % (
-              obj_type.__name__,
-              ', '.join('%s: %s' % (
-                  safe_repr(k, maxdepth),
-                  safe_repr(v, newdepth)
-              ) for k, v in obj.items()))
-      else:
-          return '{%s}' % ', '.join('%s: %s' % (
-              safe_repr(k, maxdepth),
-              safe_repr(v, newdepth)
-          ) for k, v in obj.items())
+    if obj_type is not dict:
+      return '%s({%s})' % (
+        obj_type.__name__,
+        ',\n1@'.join('%s: %s' % (
+          safe_repr(k, maxdepth),
+          safe_repr(v, newdepth)
+        ) for k, v in obj.items()))
+    else:
+      return '{%s}' % ',\n2@'.join('%s: %s' % (
+        safe_repr(k, maxdepth),
+        safe_repr(v, newdepth)
+      ) for k, v in obj.items())
   elif isinstance(obj, list):
-      if obj_type is not list:
-          return '%s([%s])' % (obj_type.__name__, ', '.join(safe_repr(i, newdepth) for i in obj))
-      else:
-          return '[%s]' % ', '.join(safe_repr(i, newdepth) for i in obj)
+    if obj_type is not list:
+      return '%s([%s])' % (obj_type.__name__, ',\n3@'.join(safe_repr(i, newdepth) for i in obj))
+    else:
+      return '[%s]' % ',\n4@'.join(safe_repr(i, newdepth) for i in obj)
   elif isinstance(obj, tuple):
-      if obj_type is not tuple:
-          return '%s(%s%s)' % (
-              obj_type.__name__,
-              ', '.join(safe_repr(i, newdepth) for i in obj),
-              ',' if len(obj) == 1 else '')
-      else:
-          return '(%s%s)' % (', '.join(safe_repr(i, newdepth) for i in obj), ',' if len(obj) == 1 else '')
+    if obj_type is not tuple:
+      return '%s(%s%s)' % (
+        obj_type.__name__,
+        ',\n'.join(safe_repr(i, newdepth) for i in obj),
+        ',' if len(obj) == 1 else '')
+    else:
+      return '(%s%s)' % (',\n'.join(safe_repr(i, newdepth) for i in obj), ',' if len(obj) == 1 else '')
   elif isinstance(obj, set):
-      if obj_type is not set:
-          return '%s({%s})' % (obj_type.__name__, ', '.join(safe_repr(i, newdepth) for i in obj))
-      else:
-          return '{%s}' % ', '.join(safe_repr(i, newdepth) for i in obj)
+    if obj_type is not set:
+      return '%s({%s})' % (obj_type.__name__, ',\n'.join(safe_repr(i, newdepth) for i in obj))
+    else:
+      return '{%s}' % ',\n'.join(safe_repr(i, newdepth) for i in obj)
   elif isinstance(obj, frozenset):
-      return '%s({%s})' % (obj_type.__name__, ', '.join(safe_repr(i, newdepth) for i in obj))
+    return '%s({%s})' % (obj_type.__name__, ',\n'.join(safe_repr(i, newdepth) for i in obj))
   elif isinstance(obj, deque):
-      return '%s([%s])' % (obj_type.__name__, ', '.join(safe_repr(i, newdepth) for i in obj))
+    return '%s([%s])' % (obj_type.__name__, ',\n'.join(safe_repr(i, newdepth) for i in obj))
   elif isinstance(obj, BaseException):
-      return '%s(%s)' % (obj_type.__name__, ', '.join(safe_repr(i, newdepth) for i in obj.args))
+    return '%s(%s)' % (obj_type.__name__, ',\n'.join(safe_repr(i, newdepth) for i in obj.args))
   elif obj_type in (type, types.ModuleType,
-          types.FunctionType, types.MethodType,
-          types.BuiltinFunctionType, types.BuiltinMethodType,
-          io.IOBase):
-      # hardcoded list of safe things. note that isinstance ain't used
-      # (we don't trust subclasses to do the right thing in __repr__)
-      return repr(obj)
+                      types.FunctionType, types.MethodType,
+                      types.BuiltinFunctionType, types.BuiltinMethodType,
+                      io.IOBase):
+    # hardcoded list of safe things. note that isinstance ain't used
+    # (we don't trust subclasses to do the right thing in __repr__)
+    return repr(obj)
   elif not has_dict(obj_type, obj):
-      return repr(obj)
+    return repr(obj)
   else:
-      # if the object has a __dict__ then it's probably an instance of a pure python class, assume bad things
-      #  with side-effects will be going on in __repr__ - use the default instead (object.__repr__)
-      return object.__repr__(obj)
+    # if the object has a __dict__ then it's probably an instance of a pure python class, assume bad things
+    #  with side-effects will be going on in __repr__ - use the default instead (object.__repr__)
+    return object.__repr__(obj)
 
-CustomPrinter.safe_repr = safe_deep_repr
-CustomPrinter.filename_prefix = patched_filename_prefix2
+def has_dict(obj_type, obj, tolerance=25):
+  """
+  A contrived mess to check that object doesn't have a __dit__ but avoid checking it if any ancestor is evil enough to
+  explicitly define __dict__ (like apipkg.ApiModule has __dict__ as a property).
+  """
+  ancestor_types = deque()
+  while obj_type is not type and tolerance:
+    ancestor_types.appendleft(obj_type)
+    obj_type = type(obj_type)
+    tolerance -= 1
+  for ancestor in ancestor_types:
+    __dict__ = getattr(ancestor, '__dict__', None)
+    if __dict__ is not None:
+      if '__dict__' in __dict__:
+        return True
+  return hasattr(obj, '__dict__')
+
+CustomPrinter.safe_repr = safe_repr
+CallPrinter2.safe_repr = safe_repr
+
 class QueryConfig:
   """note: changes in __call__ methods are visible in ytdev not ytdf"""
-  Config = namedtuple('Config' , 'query actions outputs filenames write_func epdf_pklpth')
+  Config = namedtuple('Config' , 'query actions outputs filenames write_func evtdcts_pklpth')
 
   def __init__(self):
     self.basedir = Path('/Users/alberthan/VSCodeProjects/vytd/src/youtube-dl')
-    self.fulldir = self.basedir.joinpath('bin/agg.full').absolute()
     self.configs = []
 
   def write_func(self,outputs,filenames):
     for filename in filenames:
-        fndir = filename.parent
-        fndir.mkdir(parents=True,exist_ok=True)
+      fndir = filename.parent
+      fndir.mkdir(parents=True,exist_ok=True)
     for output,filename in zip(outputs,filenames):
-        with open(filename, 'w') as f:
-          f.write(output.getvalue())
+      with open(filename, 'a') as f:
+        # f.write(f"{type(output)=}")
+        # f.write(output.write())
+        # f.write(f"{dir(output)=}")
+        f.write(output)
     for filename in filenames:
-        dirname = filename.parent
-        new_pth_cmpts = dirname.relative_to(self.basedir)
-        outdir = self.basedir.joinpath(new_pth_cmpts)
-        fs = FileSplit(file=filename, splitsize=1_100_000, output_dir=outdir)
-        fs.split()
-
-  def fullcall(self):
-    base = self.basedir.joinpath('bin/agg.fullcall').absolute()
-    base.mkdir(parents=True,exist_ok=True)
-    actions = [
-      CallPrinter(stream=io.StringIO(),repr_limit=4096), # repr_limit=1024
-    ]
-    outputs = [action.stream for action in actions]
-    filenames = [base.joinpath(filename).absolute() for filename in ['call.fullcall.log']]
-    assert len(filenames) == 1, filenames
-    write_func = partial(self.write_func,outputs,filenames)
-    epdf_pklpth = base.joinpath('epdf.pkl')
-    query = And(
-      Q(filename_contains="youtube",
-            stdlib=True,
-            actions=actions),
-      ~Q(filename_contains="hunterconfig"))
-    c = QueryConfig.Config(query,actions,outputs,filenames,write_func,epdf_pklpth)
-    self.configs.append(c)
-    return c
+      dirname = filename.parent
+      new_pth_cmpts = dirname.relative_to(self.basedir)
+      outdir = self.basedir.joinpath(new_pth_cmpts)
+      fs = FileSplit(file=filename, splitsize=1_100_000, output_dir=outdir)
+      fs.split()
 
   def eventpickle(self):
-    base = self.basedir.joinpath('bin/eventpickle').absolute()
+    base = self.basedir.joinpath('bin/yt_eventpickle').absolute()
     base.mkdir(parents=True,exist_ok=True)
     actions = [
-      # CustomPrinter(stream=io.StringIO(),repr_limit=4096), # repr_limit=1024
-      CustomPrinter(repr_limit=4096), # repr_limit=1024
+      CustomPrinter(
+        stream=io.StringIO(),
+        repr_limit=4096,
+        repr_func=safe_repr,
+        filename_alignment=10,
+        force_colors=False), # repr_limit=1024
     ]
     outputs = [action.stream for action in actions]
-    filenames = [base.joinpath(filename).absolute() for filename in ['call.eventpickle.log']]
+    filenames = [base.joinpath(filename).absolute() for filename in ['call.yt_eventpickle.log']]
     write_func = partial(self.write_func,outputs,filenames)
-    epdf_pklpth = base.joinpath('epdf.pkl')
+    evtdcts_pklpth = base.joinpath('evtdcts_pklpth.pkl')
     query = And(
-      Q(filename_contains="youtube",
+      Q(filename_endswith=[".py"],
+            filename_contains="youtube_dl",
+            kind='return',
             stdlib=True,
             actions=actions),
-      ~Q(filename_contains="hunterconfig"))
-    c = QueryConfig.Config(query,actions,outputs,filenames,write_func,epdf_pklpth)
+      ~Q(filename_endswith=["hunterconfig.py","evt_loader.py"]))
+    c = QueryConfig.Config(query,actions,outputs,filenames,write_func,evtdcts_pklpth)
     self.configs.append(c)
     return c
 
-  # Args: query: criteria to match on.
-
-  # Accepted arguments:
-  # `arg`,
-  # `calls`,
-  # `code`,
-  # `depth`,
-  # `filename`,
-  # `frame`,
-  # `fullsource`,
-  # `function`,
-  # `globals`,
-  # `kind`,
-  # `lineno`,
-  # `locals`,
-  # `module`,
-  # `source`,
-  # `stdlib`,
-  # `threadid`,
-  # `threadname`.

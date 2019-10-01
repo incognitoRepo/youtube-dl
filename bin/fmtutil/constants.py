@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 FILENAME_PREFIXES = ["call","code","snoop"]
 BASE = "full.log"
 FILENAMES = [f"{prefix}.{BASE}" for prefix in FILENAME_PREFIXES]
@@ -66,10 +67,11 @@ class Color:
 
   def fore(self,txt,key=None):
     """..key: segment|color"""
-    if sgmt:
+    segment_keys = self.segment_colors.keys()
+    if key in segment_keys:
       c = self.segment_colors[key]
     else:
-      _key = f"{fore}({key})"
+      _key = f"fore({key})"
       c = self.fg_colors[_key]
     reset = self.color_modifiers['RESET']
     s = (
