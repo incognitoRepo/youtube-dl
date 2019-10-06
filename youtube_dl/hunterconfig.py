@@ -835,7 +835,7 @@ class CustomPrinter(CallPrinter):
       cleaned_arg = make_event_arg_pickleable(arg)
       pkld_bytes = get_pickled_bytes(cleaned_arg)
       return_value = write_to_disk(pkld_bytes,og_arg,debug=True)
-      print(f"{og_arg}\n{arg}\n{cleaned_arg}\n{return_value}\n")
+      print(arg,pkld_bytes)
       # assert return_value
       return return_value
 

@@ -8,5 +8,5 @@ rm /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/custom/auto_repr.log
 rm /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/custom/attribute_err.log
 rm /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/custom/type_err.log
 
-CFG="reference"
-/Users/alberthan/VSCodeProjects/vytd/bin/ipython3 -im youtube_dl https://www.pornhub.com/view_video.php\?viewkey\=ph565440318d245
+# CFG="reference"
+/Users/alberthan/VSCodeProjects/vytd/bin/python3 -m youtube_dl https://xhamster.com/videos/khloe-gets-fucked-doggystyle-11663353\#mlrelated
