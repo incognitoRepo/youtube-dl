@@ -6,11 +6,12 @@ p = '/Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/bin'
 sys.path.append(p)
 import fmtutil
 """
-import hunter, re, os, types, sys, shelve
+import hunter, re, os, types, sys, shelve, dbm, base64
 from ast import literal_eval as leval
 from itertools import count
 from functools import singledispatchmethod, cached_property
 from typing import List, Dict, Iterable, Union
+from types import TracebackType, GeneratorType
 from hunter import Q, Query, Event
 from hunter.predicates import And, When
 from hunter.actions import CallPrinter, CodePrinter, VarsPrinter, VarsSnooper, CALL_COLORS, MISSING
@@ -22,21 +23,121 @@ from pathlib import Path
 from tblib import Traceback
 import pandas as pd
 from copy import deepcopy
-import hickle as pickle
-import traceback
+import pickle, inspect
+import traceback, stackprinter
 from enum import Enum
 from pdb import set_trace as st
 from dataclasses import dataclass, field, InitVar
-from prettyprinter import cpprint, pprint
+from prettyprinter import cpprint, pprint, pformat
 from pygments import highlight
 from pygments.lexers import PythonLexer
 from pygments.formatters import Terminal256Formatter
 from prettyprinter import pprint
 from urllib.parse import urlparse, ParseResult
+from urllib.response import addinfourl
 from pprint import pformat
 from hunter.util import safe_repr
 from youtube_dl.evt_loader import process_dcts, process_vs
+from optparse import OptionParser
+import copyreg
+
+def pickle_traceback(tb):
+  return traceback.format_tb(tb)
+
+copyreg.pickle(TracebackType,pickle_traceback)
 DEBUG = "dbg_cfg_ret.log"
+
+def info(o):
+  try:
+    lng = len(o)
+  except TypeError as exc:
+    lng = "cannot len this obj"
+  typ = type(o)
+  s = f"\n\n{typ}, {lng}\n{repr(o)}\n\n"
+  return s
+
+def dict_prnt(d):
+  key_lst = list(d.keys())
+  key_lst2 = [k for k in key_lst if not (k.startswith('_') or k.startswith('__'))]
+  new_dct = {k:d[k] for k in key_lst2}
+  ns = pformat(new_dct)
+  return ns
+
+def is_io(obj):
+  if isinstance(obj,io.StringIO) or isinstance(obj,io.BytesIO):
+    return True
+  return False
+
+def auto_repr(obj):
+  try:
+    class_name = obj.__class__.__name__
+    part_1 = f'<{class_name}: '
+    items = []
+    _d = obj.__dict__
+    d = {k:v for k,v in _d.items() if not (k.startswith('_'))}
+    for k,v in d.items():
+      try:
+        if is_class(v): nv = auto_repr(v)
+        elif isinstance(v,dict): nv = pformat(v)
+        elif isinstance(v,io.StringIO) or isinstance(v,io.BytesIO):
+          nv = v.__class__.__name__
+        else: nv = repr(v)
+        s = f'{k} = {nv}'
+        items.append(s)
+      except:
+        with open('auto_repr.log','w') as f:
+          f.write(f"{obj}")
+        raise SystemExit
+    secondary_indent = ' '*len(part_1)
+    part_2 = f',{secondary_indent}'.join(items)
+    return f'{part_1}{part_2}>'
+  except AttributeError:
+    with open('auto_repr.log','w') as f:
+      f.write(f"{obj}")
+    raise SystemExit
+
+def is_class(obj):
+  s = repr(obj)
+  if s.startswith("<class"):
+    return True
+  return False
+
+def is_instance(obj):
+  rgx = re.compile(r"<(?P<module>[_A-z][A-z_0-9]*)[.](?P<klass>[A-z_][A-z_0-9]*)")
+  m = rgx.match(repr(obj))
+  if m:
+    module,klass = m.groupdict().values()
+    return module,klass
+  return False
+
+def has_dct(obj):
+  # with open('has_d.log','w') as f:
+    # f.write(str(vars()))
+  if hasattr(obj,'_asdict'):
+    d = obj._asdict()
+  else:
+    d = obj.__dict__
+  return dict_prnt(d)
+
+def is_function(obj):
+  if str(obj).startswith("<function"):
+    return auto_repr(obj)
+  return False
+
+def debug_error(obj, err_type, attempted_str="", **funcs):
+  filename = "attribute" if err_type == "AttributeError" else "type"
+  s = f"info: \n{info(obj)}"
+  att = f"attempted str: \n{attempted_str}" if attempted_str else ""
+  ar = f"auto_repr: \n{auto_repr(obj)}"
+  lst = []
+  for func in funcs:
+    lst.append(repr(func(obj)))
+  joined_lst = '\n'.join(lst)
+  write_value = f"{s}\n{att}\n{ar}\n{joined_lst}"
+  with open(f"{filename}_err.log","w") as f:
+    f.write(write_value)
+  print(write_value)
+
 @dataclass
 class Color:
   color_modifiers = {
@@ -133,7 +234,6 @@ class Color:
         print(f"{k}: {v}")
       for k,v in d.items():
         print(f'"{k}": "{repr(v)}"')
-
 
 @dataclass
 class EventKind:
@@ -495,16 +595,16 @@ class LineEvent(EventKind):
 class CustomPrinter(CallPrinter):
   EVENT_COLORS = CALL_COLORS
 
-  def __init__(self, *args, **kwargs):
+  def __init__(self, base_path, *args, **kwargs):
     super(CustomPrinter, self).__init__(*args, **kwargs)
     self.locals = defaultdict(list)
     self.count = count(0)
-    self.evt_dcts = []
+    self.base_path = base_path
+    self.pickle_path = base_path.joinpath('pickle')
+    self.shelf_path = base_path.joinpath('shelf')
     self.debugfilepth = Path('/Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/bin/debug.log')
-    self.pklpth = Path('/Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/bin/eventpickle/evtdcts_pklpth.pkl')
-    self.pklpth2 = Path('/Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/bin/eventpickle')
     self.pklcnt = count()
-    self.old_fn = ""
+    # self.old_fn = ""
 
   def write_to_debugfile(self,f,f2,f3,frv):
     s = (
@@ -585,7 +685,7 @@ class CustomPrinter(CallPrinter):
     }
     return d
 
-  def update_evt_dct(self,evt_dct,event,filename_prefix_mono,filename_prefix_poly,stack,output):
+  def update_evt_dct_1(self,evt_dct,event,filename_prefix_mono,filename_prefix_poly,stack,output):
     d = {'call': CallEvent, 'line': LineEvent,
     'return': ReturnEvent, 'exception': ExceptionEvent}
     hntr_evt = d[event.kind](event,filename_prefix_mono,filename_prefix_poly,stack)
@@ -664,7 +764,7 @@ class CustomPrinter(CallPrinter):
     else:
       return repr(a)
 
-  def process_event_arg(self,a):
+  def process_event_arg2(self,a):
     if not a:
       return
     if str(a).startswith("<Values"):
@@ -686,32 +786,254 @@ class CustomPrinter(CallPrinter):
       prcsd = process_vs(a)
     return prcsd
 
-  def append_evtdct_to_pickle(self,edct):
-    n = next(self.pklcnt)
-    if not edct:
-      return
-    elif n == 0 or n == 4000:
-      filename = self.pklpth2.joinpath(f'evtdcts_pklpth{n}.db')
-      self.old_fn = filename
-    else:
-      filename = self.old_fn
-    try:
-      with shelve.open(filename) as s:
-        flag = 'evt_dcts' in s
-        if flag:
-          evt_dcts = s['evt_dcts']
-          evt_dcts.append(edct['og_arg'])
-          s['evt_dcts'] = evt_dcts
+  def process_event_arg(self,a):
+    with open('hc690','a') as f:
+      f.write(info(a))
+    if not a: return
+    prcsd = process_dcts([{'prcsd':a}])
+    return prcsd
+
+  def read_from_pickle(self):
+    """Load each item that was previously written to disk."""
+    # result_lines = []
+    # with open(self.pickle_path, 'rb') as file:
+    #   try:
+    #     lines = file.readlines()
+    #     decoded_lines = [base64.b64decode(elm) for elm in lines]
+    #     unpkld_lines = [pickle.loads(elm) for elm in decoded_lines]
+    #     result_lines.append(unpkld_lines)
+    #   except EOFError:
+    #     pass
+    pkld_strhex = Path(self.pickle_path).parent.joinpath('eventpickle_hex')
+    with open(pkld_strhex, 'r') as file:
+      try:
+        lines = file.readlines()
+        decoded_lines = [bytes.fromhex(elm).strip() for elm in lines]
+        unpkld_lines = [pickle.loads(elm) for elm in decoded_lines]
+        return unpkld_lines
+      except EOFError:
+        raise
+
+  def write_to_pickle(self,arg,i=0):
+    Pkl = namedtuple('Pkl', 'raw_value pkld_bytes')
+    if not arg or arg == None: return
+    if i == 14572:
+      with open('hc812','a') as f:
+        f.write(
+          f"{i}: {type(arg)}\n"
+          f"{i}: {repr(arg)}\n"
+          f"{isinstance(arg,addinfourl)}\n"
+          # f"{arg.__class__name=}\n"
+          f"{auto_repr(arg)}\n"
+          f"{is_io(arg)=}\n")
+    pkld_bytes = ""
+    lvl1sep = f"\n{'-'*80}\n"
+    lvl2sep = f"\n  {'-'*60}\n  "
+
+    def main(arg) -> bool:
+      og_arg = arg
+      cleaned_arg = make_event_arg_pickleable(arg)
+      pkld_bytes = get_pickled_bytes(cleaned_arg)
+      return_value = write_to_disk(pkld_bytes,og_arg,debug=True)
+      print(f"{og_arg}\n{arg}\n{cleaned_arg}\n{return_value}\n")
+      # assert return_value
+      return return_value
+
+    def make_event_arg_pickleable(arg,keep=False):
+      if isinstance(arg,tuple) and (len(arg) == 3 or len(arg) == 2):
+        if isinstance(arg[1],BaseException):
+          assert arg[2] is None or isinstance(arg[2],TracebackType), f"{info(arg)}"
+          arg = traceback.format_exception_only(arg[0],arg[1])
         else:
-          s['evt_dcts'] = [edct['og_arg']]
-    except:
-      with open('error612','w') as f:
-        f.write(repr(edct))
+          raise SystemExit
+      elif isinstance(arg,addinfourl):
+        with open('hc838','a') as f:
+          f.write(info(arg))
+        arg = auto_repr(arg)
+        with open('hc838','a') as f:
+          f.write(arg)
+      else:
+        arg = arg
+      return arg
+
+    def get_pickled_bytes(cleaned_arg):
+      arg = cleaned_arg
+      try:
+        pkld_bytes = Pkl(arg, pickle.dumps(arg))
+        return pkld_bytes
+      except pickle.PickleError as err:
+        if is_class(arg) or is_instance(arg):
+          try:
+            arg = auto_repr(arg)
+            pkld_bytes = Pkl(arg, pickle.dumps(arg))
+            return pkld_bytes
+          except:
+            print("PickleError Unresolved")
+            print(arg)
+            print(auto_repr(arg))
+            raise SystemExit
+        elif isinstance(arg,list):
+          _ = [self.write_to_pickle(elm) for elm in arg]
+          pkld_bytes = Pkl(_, pickle.dumps(_))
+          return pkld_bytes
+        elif has_dct(arg):
+          _ = has_dct(arg)
+          pkld_bytes = Pkl(_, pickle.dumps(_))
+          return pkld_bytes
+        else:
+          print("PickleError Unresolved 2")
+          print(repr(arg))
+          raise SystemExit
+      except AttributeError as err:
+        if isinstance(arg,tuple):
+          try:
+            pkld_bytes = [self.write_to_pickle(elm) for elm in arg]
+            pkld_bytes = Pkl(pkld_bytes, pickle.dumps(pkld_bytes))
+            return pkld_bytes
+          except:
+            print(self.write_to_pickle(arg[0]))
+            print("a.811")
+            raise SystemExit
+        elif is_class(arg):
+          arg = auto_repr(arg)
+          pkld_bytes = Pkl(arg, pickle.dumps(arg))
+          return pkld_bytes
+        elif is_instance(arg):
+          arg = auto_repr(arg)
+          pkld_bytes = Pkl(arg, pickle.dumps(arg))
+          return pkld_bytes
+        elif isinstance(arg,dict):
+          try:
+            lst = []
+            for k,v in arg.items():
+              lst.append(f"{k}: {repr(v)}")
+            _ = "\n".join(lst)
+            pkld_bytes = Pkl(_,pickle.dumps(_))
+            return pkld_bytes
+          except:
+            print("AttributeError Unresolved 2")
+        elif inspect.isfunction(arg):
+          try:
+            _ = is_function(arg)
+            pkld_bytes = Pkl(_, pickle.dumps(_))
+            return pkld_bytes
+          except:
+            print("AttributeError Unresolved 4")
+            raise SystemExit
+        elif isinstance(arg,list):
+          _ = [self.write_to_pickle(elm) for elm in arg]
+          pkld_bytes = Pkl(_, pickle.dumps(_))
+          return pkld_bytes
+        else:
+          print(lvl2sep,"AttributeError Unresolved 3")
+          print(str(arg))
+          print(str(arg).startswith("<class"))
+          print(is_class(arg))
+          raise SystemExit
+      except TypeError as err:
+        if isinstance(arg,tuple):
+          if is_class(arg[0]):
+            _ = auto_repr(arg[0])
+            pkld_bytes = Pkl(_,pickle.dumps(_))
+            return pkld_bytes
+          else:
+            debug_error(arg,auto_repr(arg[0]),"TypeError")
+            print("TypeError Unresolved 1")
+            raise SystemExit
+        elif isinstance(arg,dict):
+          try:
+            lst = []
+            for k,v in arg.items():
+              lst.append(f"{k}: {repr(v)}")
+            _ = "\n".join(lst)
+            pkld_bytes = Pkl(_,pickle.dumps(_))
+            return pkld_bytes
+          except:
+            print("TypeError Unresolved 2")
+            raise SystemExit
+        elif hasattr(arg,'__dict__'):
+          try:
+            d = arg.__dict__
+            print(d)
+            lst = []
+            for k,v in d.items():
+              lst.append(f"{k}: {repr(v)}")
+            _ = "\n".join(lst)
+            pkld_bytes = Pkl(_,pickle.dumps(_))
+            return pkld_bytes
+          except:
+            print("TypeError Unresolved 3")
+            raise SystemExit
+        elif isinstance(arg,GeneratorType):
+          try:
+            _ = repr(list(arg))
+            pkld_bytes = Pkl(_,pickle.dumps(_))
+            return pkld_bytes
+          except:
+            print("TypeError Unresolved 4")
+            raise SystemExit
+        else:
+          print(info(arg))
+          debug_error(arg,"TypeError")
+          print(lvl2sep,"TypeError Unresolved 5")
+          raise SystemExit
+      except:
+        print("Unknown Exception Unresolved")
+        print()
+        raise SystemExit
+
+    def write_to_disk(pkld_bytes,og_arg=None,debug=False):
+      pkld_obj, pkld_bytes = pkld_bytes
+      if debug:
+        pkld_strori = Path(self.pickle_path).parent.joinpath('eventpickle_ori')
+        with open(pkld_strori,'a') as f:
+          f.write(repr(og_arg)+'\n')
+        pkld_strarg = Path(self.pickle_path).parent.joinpath('eventpickle_arg')
+        with open(pkld_strarg,'a') as f:
+          f.write(repr(pkld_obj)+'\n')
+      pkld_strhex = Path(self.pickle_path).parent.joinpath('eventpickle_hex')
+      with open(pkld_strhex,'a') as f:
+        pkld_strhex = pkld_bytes.hex()
+        f.write(pkld_strhex+'\n')
+      return pkld_strhex
+
+    main(arg)
+
+  def write_to_shelf(self,fmtd_arg):
+    if not edct: return
+    with open('hc691','a') as f:
+      f.write(info(edct))
+    n = next(self.pklcnt)
+    filename = self.shelf_path
+    if not Path(f"{str(filename)}.db").exists():
+      with shelve.open(str(filename),flag='c') as s:
+        s['evt_dcts'] = [edct['fmtd_arg']]
+    else:
+      with shelve.open(str(filename),flag='w') as s:
+        assert 'evt_dcts' in s, repr(s.keys())
+        try:
+          evt_dcts = s['evt_dcts']
+          evt_dcts.append(edct['fmtd_arg'])
+          s['evt_dcts'] = evt_dcts
+        except:
+          with open('hc702','a') as f:
+            f.write(repr(edct))
+            f.write(stackprinter.format(sys.exc_info()))
+          raise SystemExit
+
+  def read_from_shelf(self):
+    with shelve.open(self.old_fn,flag='r') as s:
+      try:
+        # print(s['evt_dcts'])
+        evt_dcts = s['evt_dcts']
+        return evt_dcts
+      except dbm.error as err:
+        print('ERROR: {}'.format(err))
 
   def __call__(self, event):
     count = next(self.count)
-    og_arg = self.process_event_arg(event.arg)
-    arg = self.process_event_arg_BAK(event.arg)
+    fmtd_arg = self.process_event_arg(event.arg)
+    self.write_to_pickle(event.arg,i=count)
 
     ident = event.module, event.function
 
@@ -741,16 +1063,6 @@ class CustomPrinter(CallPrinter):
         ) for var in code.co_varnames[:code.co_argcount]),
         COLOR=self.event_colors.get(event.kind),
       )
-      # evt_dct = self.update_evt_dct(
-       #    evt_dct,
-       #    event,
-       #    filename_prefix_mono,
-       #    filename_prefix_poly,
-       #    stack,
-       #    output
-       #  )
-      self.append_evtdct_to_pickle(og_arg)
-      # self.evt_dcts.append(evt_dct)
       self.write_output(output)
     elif event.kind == 'exception':
       # :event.arg: tuple = (exception, value, traceback)
@@ -765,16 +1077,6 @@ class CustomPrinter(CallPrinter):
         event.arg if event.detached else self.try_repr(event.arg),
         COLOR=self.event_colors.get(event.kind),
       )
-      # evt_dct = self.update_evt_dct(
-        #   evt_dct,
-        #   event,
-        #   filename_prefix_mono,
-        #   filename_prefix_poly,
-        #   stack,
-        #   output
-        # )
-      self.append_evtdct_to_pickle(og_arg)
-      # self.evt_dcts.append(evt_dct)
       self.write_output(output)
     elif event.kind == 'return':
       # :event.arg: = return value or `None` if exception
@@ -789,18 +1091,6 @@ class CustomPrinter(CallPrinter):
         event.arg if event.detached else self.try_repr(event.arg),
         COLOR=self.event_colors.get(event.kind),
       )
-      # evt_arg = {k:str(v) for k,v in live_event.arg}
-      # event.arg = evt_arg
-      # evt_dct = self.update_evt_dct(
-        #   evt_dct,
-        #   event,
-        #   filename_prefix_mono,
-        #   filename_prefix_poly,
-        #   stack,
-        #   output
-        # )
-      self.append_evtdct_to_pickle(og_arg)
-      # self.evt_dcts.append(evt_dct)
       self.write_output(output)
       if stack and stack[-1] == ident:
         stack.pop()
@@ -815,95 +1105,7 @@ class CustomPrinter(CallPrinter):
         '   ' * len(stack),
         self.try_source(event).strip(),
       )
-      # evt_dct = self.update_evt_dct(
-        #   evt_dct,
-        #   event,
-        #   filename_prefix_mono,
-        #   filename_prefix_poly,
-        #   stack,
-        #   output
-        # )
-      self.append_evtdct_to_pickle(og_arg)
-      # self.evt_dcts.append(evt_dct)
       self.write_output(output)
-
-class CallPrinter2(CallPrinter):
-  EVENT_COLORS = CALL_COLORS
-
-  def __init__(self, *args, **kwargs):
-    super(CallPrinter2, self).__init__(*args, **kwargs)
-    self.locals = defaultdict(list)
-
-  def __call__(self, event):
-    """
-    Handle event and print filename, line number and source code. If event.kind is a `return` or `exception` also
-    prints values.
-    """
-    ident = event.module, event.function
-
-    thread = threading.current_thread()
-    stack = self.locals[thread.ident]
-
-    pid_prefix = self.pid_prefix()
-    thread_prefix = self.thread_prefix(event)
-    filename_prefix = self.filename_prefix(event)
-
-    if event.kind == 'call':
-      code = event.code
-      stack.append(ident)
-      self.output(
-        '{}{}{}{KIND}{:9} {}{COLOR}=>{NORMAL} {}({}{COLOR}{NORMAL}){RESET}\n',
-        pid_prefix,
-        thread_prefix,
-        filename_prefix,
-        event.kind,
-        '   ' * (len(stack) - 1),
-        event.function,
-        ', '.join('{VARS}{VARS-NAME}{0}{VARS}={RESET}{1}'.format(
-          var,
-          event.locals.get(var, MISSING) if event.detached else self.try_repr(event.locals.get(var, MISSING)),
-          **self.other_colors
-        ) for var in code.co_varnames[:code.co_argcount]),
-        COLOR=self.event_colors.get(event.kind),
-        )
-    elif event.kind == 'exception':
-      self.output(
-        '{}{}{}{KIND}{:9} {}{COLOR} !{NORMAL} {}: {RESET}{}\n',
-        pid_prefix,
-        thread_prefix,
-        filename_prefix,
-        event.kind,
-        '   ' * (len(stack) - 1),
-        event.function,
-        event.arg if event.detached else self.try_repr(event.arg),
-        COLOR=self.event_colors.get(event.kind),
-      )
-
-    elif event.kind == 'return':
-      self.output(
-        '{}{}{}{KIND}{:9} {}{COLOR}<={NORMAL} {}: {RESET}{}\n',
-        pid_prefix,
-        thread_prefix,
-        filename_prefix,
-        event.kind,
-        '   ' * (len(stack) - 1),
-        event.function,
-        # event.arg if event.detached else self.try_repr(event.arg),
-        self.try_repr(event.arg),
-        COLOR=self.event_colors.get(event.kind),
-      )
-      if stack and stack[-1] == ident:
-        stack.pop()
-    else:
-      self.output(
-        '{}{}{}{KIND}{:9} {RESET}{}{}{RESET}\n',
-        pid_prefix,
-        thread_prefix,
-        filename_prefix,
-        event.kind,
-        '   ' * len(stack),
-        self.try_source(event).strip(),
-      )
 
 def safe_repr(obj, maxdepth=5):
   if not maxdepth:
@@ -981,11 +1183,10 @@ def has_dict(obj_type, obj, tolerance=25):
   return hasattr(obj, '__dict__')
 
 CustomPrinter.safe_repr = safe_repr
-CallPrinter2.safe_repr = safe_repr
 
 class QueryConfig:
   """note: changes in __call__ methods are visible in ytdev not ytdf"""
-  Config = namedtuple('Config' , 'query actions outputs filenames write_func evtdcts_pklpth')
+  Config = namedtuple('Config' , 'query actions outputs filenames write_func base_path')
 
   def __init__(self):
     self.basedir = Path('/Users/alberthan/VSCodeProjects/vytd/src/youtube-dl')
@@ -1009,28 +1210,30 @@ class QueryConfig:
       fs.split()
 
   def eventpickle(self):
-    base = self.basedir.joinpath('bin/yt_eventpickle').absolute()
-    base.mkdir(parents=True,exist_ok=True)
+    base_path = self.basedir.joinpath('bin/eventpickle').absolute()
+    base_path.mkdir(parents=True,exist_ok=True)
+    # pklpth = base.joinpath('evtdcts.pkl')
     actions = [
       CustomPrinter(
-        stream=io.StringIO(),
+        # stream=io.StringIO(),
         repr_limit=4096,
         repr_func=safe_repr,
         filename_alignment=10,
-        force_colors=False), # repr_limit=1024
+        force_colors=False,
+        base_path=base_path,
+        ), # repr_limit=1024
     ]
     outputs = [action.stream for action in actions]
-    filenames = [base.joinpath(filename).absolute() for filename in ['call.yt_eventpickle.log']]
+    filenames = [base_path.joinpath(filename).absolute() for filename in ['call.eventpickle.log']]
     write_func = partial(self.write_func,outputs,filenames)
-    evtdcts_pklpth = base.joinpath('evtdcts_pklpth.pkl')
+    # evtdcts_pklpth = base.joinpath('evtdcts_pklpth.pkl')
     query = And(
       Q(filename_endswith=[".py"],
             filename_contains="youtube_dl",
-            kind='return',
+            # kind='return',
             stdlib=True,
             actions=actions),
       ~Q(filename_endswith=["hunterconfig.py","evt_loader.py"]))
-    c = QueryConfig.Config(query,actions,outputs,filenames,write_func,evtdcts_pklpth)
+    c = QueryConfig.Config(query,actions,outputs,filenames,write_func,base_path)
     self.configs.append(c)
     return c
-

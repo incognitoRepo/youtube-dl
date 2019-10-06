@@ -1,0 +1,8 @@
+(<class 'OSError'>, OSError('dlopen(libc.so.6, 6): image not found'), <traceback object at 0x111608240>)
+{'version': '2019.09.12.1', 'formatter': <optparse.IndentedHelpFormatter object at 0x11160a460>, 'usage': '%prog [OPTIONS] URL [URL...]', 'conflict_handler': 'resolve'}
+['aria2c', 'avconv', 'axel', 'curl', 'ffmpeg', 'httpie', 'wget']
+['https://www.pornhub.com/view_video.php?viewkey=ph565440318d245']
+(<class 'FileNotFoundError'>, FileNotFoundError(2, 'No such file or directory'), <traceback object at 0x1111e5340>)
+(<class 'FileNotFoundError'>, FileNotFoundError(2, 'No such file or directory'), <traceback object at 0x1111c5800>)
+(<class 'FileNotFoundError'>, FileNotFoundError(2, 'No such file or directory'), <traceback object at 0x1114fbc00>)
+(<class 'FileNotFoundError'>, FileNotFoundError(2, 'No such file or directory'), <traceback object at 0x1111e7ac0>)

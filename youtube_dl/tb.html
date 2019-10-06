@@ -1,0 +1,183 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title></title>
+<style type="text/css">
+.ansi2html-content { display: inline; white-space: pre-wrap; word-wrap: break-word; }
+.body_foreground { color: #AAAAAA; }
+.body_background { background-color: #000000; }
+.body_foreground > .bold,.bold > .body_foreground, body.body_foreground > pre > .bold { color: #FFFFFF; font-weight: normal; }
+.inv_foreground { color: #000000; }
+.inv_background { background-color: #AAAAAA; }
+</style>
+</head>
+<body class="body_foreground body_background" style="font-size: normal;" >
+<pre class="ansi2html-content">
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/__main__.py, line 42, in &lt;module&gt;
+    38     output = io.StringIO()
+    39     action._stream = output
+    40   tracer.trace(query)
+    41   try:
+--&gt; 42     youtube_dl.main()
+    43   except SystemExit:
+    ..................................................
+     output = &lt;_io.StringIO object at 0x10a099430&gt;
+     io.StringIO = &lt;class '_io.StringIO'&gt;
+     action._stream = &lt;_io.StringIO object at 0x10a099430&gt;
+     tracer.trace = &lt;method 'Tracer.trace' of &lt;hunter.tracer.Tracer at 0x103587d
+                     c0: threading_support=None, handler=&lt;hunter.predicates.And: 
+                     predicates=(&lt;hunter.predicates.When: condition=&lt;hunter.predi
+                     cates.Query: query_eq=(('stdlib', True),) query_contains=(('
+                     filename', 'youtube_dl'),) query_endswith=(('filename', ('.p
+                     y',)),)&gt;, actions=(CustomPrinter(stream=&lt;_io.StringIO object
+                      at 0x10a099430&gt;, force_colors=False, filename_alignment=10,
+                      thread_alignment=12, pid_alignment=9 repr_limit=4096, repr_
+                     func=&lt;function safe_...
+     query = &lt;hunter.predicates.And: predicates=(&lt;hunter.predicates.When:
+               condition=&lt;hunter.predicates.Query: query_eq=(('stdlib', Tr
+              ue),) query_contains=(('filename', 'youtube_dl'),) query_end
+              swith=(('filename', ('.py',)),)&gt;, actions=(CustomPrinter(str
+              eam=&lt;_io.StringIO object at 0x10a099430&gt;, force_colors=False
+              , filename_alignment=10, thread_alignment=12, pid_alignment=
+              9 repr_limit=4096, repr_func=&lt;function safe_repr at 0x108c1c
+              790&gt;),)&gt;, &lt;hunter.predicates.Not: predicate=&lt;hunter.predicat
+              es.Query: query_ends...
+     youtube_dl.main = &lt;function 'main' __init__.py:472&gt;
+    ..................................................
+
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/__init__.py, line 474, in main
+    472  def main(argv=None):
+    473      try:
+--&gt; 474          _real_main(argv)
+    475      except DownloadError:
+    ..................................................
+     argv = None
+     DownloadError = &lt;class 'youtube_dl.utils.DownloadError'&gt;
+    ..................................................
+
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/__init__.py, line 469, in _real_main
+    48   def _real_main(argv=None):
+ (...)
+    465          except MaxDownloadsReached:
+    466              ydl.to_screen('--max-download limit reached, aborting.')
+    467              retcode = 101
+    468  
+--&gt; 469      sys.exit(retcode)
+    ..................................................
+     argv = None
+     MaxDownloadsReached = &lt;class 'youtube_dl.utils.MaxDownloadsReached'&gt;
+     ydl.to_screen = &lt;method 'YoutubeDL.to_screen' of &lt;youtube_dl.YoutubeDL.Youtu
+                      beDL object at 0x10bbf2a90&gt; YoutubeDL.py:500&gt;
+     retcode = 0
+    ..................................................
+
+---- (full traceback above) ----
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/__main__.py, line 42, in &lt;module&gt;
+    youtube_dl.main()
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/__init__.py, line 474, in main
+    _real_main(argv)
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/__init__.py, line 469, in _real_main
+    sys.exit(retcode)
+
+SystemExit: 0File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/__main__.py, line 42, in &lt;module&gt;
+    38     output = io.StringIO()
+    39     action._stream = output
+    40   tracer.trace(query)
+    41   try:
+--&gt; 42     youtube_dl.main()
+    43   except SystemExit:
+    ..................................................
+     output = &lt;_io.StringIO object at 0x10a099430&gt;
+     io.StringIO = &lt;class '_io.StringIO'&gt;
+     action._stream = &lt;_io.StringIO object at 0x10a099430&gt;
+     tracer.trace = &lt;method 'Tracer.trace' of &lt;hunter.tracer.Tracer at 0x103587d
+                     c0: threading_support=None, &lt;stopped&gt;&gt; tracer.py:90&gt;
+     query = &lt;hunter.predicates.And: predicates=(&lt;hunter.predicates.When:
+               condition=&lt;hunter.predicates.Query: query_eq=(('stdlib', Tr
+              ue),) query_contains=(('filename', 'youtube_dl'),) query_end
+              swith=(('filename', ('.py',)),)&gt;, actions=(CustomPrinter(str
+              eam=&lt;_io.StringIO object at 0x10a099430&gt;, force_colors=False
+              , filename_alignment=10, thread_alignment=12, pid_alignment=
+              9 repr_limit=4096, repr_func=&lt;function safe_repr at 0x108c1c
+              790&gt;),)&gt;, &lt;hunter.predicates.Not: predicate=&lt;hunter.predicat
+              es.Query: query_ends...
+     youtube_dl.main = &lt;function 'main' __init__.py:472&gt;
+    ..................................................
+
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/__init__.py, line 474, in main
+    472  def main(argv=None):
+    473      try:
+--&gt; 474          _real_main(argv)
+    475      except DownloadError:
+    ..................................................
+     argv = None
+     DownloadError = &lt;class 'youtube_dl.utils.DownloadError'&gt;
+    ..................................................
+
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/__init__.py, line 469, in _real_main
+    48   def _real_main(argv=None):
+ (...)
+    465          except MaxDownloadsReached:
+    466              ydl.to_screen('--max-download limit reached, aborting.')
+    467              retcode = 101
+    468  
+--&gt; 469      sys.exit(retcode)
+    ..................................................
+     argv = None
+     MaxDownloadsReached = &lt;class 'youtube_dl.utils.MaxDownloadsReached'&gt;
+     ydl.to_screen = &lt;method 'YoutubeDL.to_screen' of &lt;youtube_dl.YoutubeDL.Youtu
+                      beDL object at 0x10bbf2a90&gt; YoutubeDL.py:500&gt;
+     retcode = 0
+    ..................................................
+
+---- (full traceback above) ----
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/__main__.py, line 42, in &lt;module&gt;
+    youtube_dl.main()
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/__init__.py, line 474, in main
+    _real_main(argv)
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/__init__.py, line 469, in _real_main
+    sys.exit(retcode)
+
+SystemExit: 0
+
+While handling the above exception, another exception occurred:
+
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/__main__.py, line 54, in &lt;module&gt;
+    50       with open(outvalpth:=filename.parent.joinpath('output.log'),'w') as f:
+    51         f.write(outval)
+    52       print(f"wrote output value to {outvalpth}")
+    53     evt_dcts = action.read_from_shelf()
+--&gt; 54     assert (len(evt_dcts) &gt; 1), print(f"{evt_dcts=}")
+    55   except BaseException as exc:
+    ..................................................
+     outvalpth = PosixPath('/Users/alberthan/VSCodeProjects/vytd/src/youtube-
+                  dl/bin/eventpickle/output.log')
+     filename.parent.joinpath = &lt;method 'PurePath.joinpath' of /Users/alberthan/VSCodeProjec
+                                 ts/vytd/src/youtube-dl/bin/eventpickle pathlib.py:901&gt;
+     f = &lt;_io.TextIOWrapper name='/Users/alberthan/VSCodeProjects/vyt
+          d/src/youtube-dl/bin/eventpickle/output.log' mode='w' encodi
+          ng='UTF-8'&gt;
+     outval = '____init__\x1b[1m\x1b[30m:(\x1b[0m00472|00000)\x1b[36mcall 
+                    \x1b[1m\x1b[34m=&gt;\x1b[22m main(\x1b[1m\x1b[35m\x1b[22m\
+               x1b[35margv\x1b[1m\x1b[35m=\x1b[0mNone\x1b[1m\x1b[34m\x1b[22
+               m)\x1b[0m\n____init__\x1b[1m\x1b[30m:(\x1b[0m00473|00001)\x1
+               b[36mline      \x1b[0m   try:\x1b[0m\n____init__\x1b[1m\x1b[
+               30m:(\x1b[0m00474|00002)\x1b[36mline      \x1b[0m   _real_ma
+               in(argv)\x1b[0m\n____init__\x1b[1m\x1b[30m:(\x1b[0m00048|000
+               03)\x1b[36mcall         \x1b[1m\x1b[34m=&gt;\x1b[22m _real_main
+               (\x1b[1m\x1b[35m\x1b...
+     evt_dcts = [None, ]
+     action.read_from_shelf = &lt;method 'CustomPrinter.read_from_shelf' of CustomPrinter(str
+                               eam=&lt;_io.StringIO object at 0x10a099430&gt;, force_colors=False
+                               , filename_alignment=10, thread_alignment=12, pid_alignment=
+                               9 repr_limit=4096, repr_func=&lt;function safe_repr at 0x108c1c
+                               790&gt;) hunterconfig.py:729&gt;
+     exc = AssertionError(None)
+    ..................................................
+
+AssertionError: None
+</pre>
+</body>
+
+</html>

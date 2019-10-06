@@ -21,8 +21,12 @@ from pathlib import Path
 from pdb import set_trace as st
 import os, io, stackprinter
 import pickle, sys
+from optparse import OptionParser
+from types import GeneratorType
 
 test = True
+output = True
+dcts = []
 
 if __name__ == '__main__':
   qc = QueryConfig()
@@ -31,20 +35,24 @@ if __name__ == '__main__':
   query,actions,outputs,filenames,write_func,epdf_pklpth = qcfg
   filename = filenames[0]
   action = actions[0]
-  output = io.StringIO()
-  action._stream = output
+  if output:
+    output = io.StringIO()
+    action._stream = output
   tracer.trace(query)
   try:
-    retval = youtube_dl.main()
+    youtube_dl.main()
   except SystemExit:
     tb1 = stackprinter.format(sys.exc_info())
     try:
       tracer.stop()
-      outval = output.getvalue()
-      output.close()
-      with open(outvalpth:=filename.parent.joinpath('output.log'),'w') as f:
-        f.write(outval)
-      print(f"wrote output value to {outvalpth}")
+      if output:
+        outval = output.getvalue()
+        output.close()
+        with open(outvalpth:=filename.parent.joinpath('output.log'),'w') as f:
+          f.write(outval)
+        print(f"wrote output value to {outvalpth}")
+      evt_dcts = action.read_from_pickle()
+      dcts.append(evt_dcts)
     except BaseException as exc:
       tb2 = stackprinter.format(exc)
       with open('tb.log','w') as f:

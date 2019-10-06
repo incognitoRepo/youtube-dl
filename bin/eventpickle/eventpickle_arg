@@ -1,0 +1,8 @@
+['OSError: dlopen(libc.so.6, 6): image not found\n']
+"version: '2019.09.12.1'\nformatter: <optparse.IndentedHelpFormatter object at 0x11160a460>\nusage: '%prog [OPTIONS] URL [URL...]'\nconflict_handler: 'resolve'"
+['aria2c', 'avconv', 'axel', 'curl', 'ffmpeg', 'httpie', 'wget']
+['https://www.pornhub.com/view_video.php?viewkey=ph565440318d245']
+["FileNotFoundError: [Errno 2] No such file or directory: '/etc/youtube-dl.conf'\n"]
+["FileNotFoundError: [Errno 2] No such file or directory: '/Users/alberthan/.config/youtube-dl.conf'\n"]
+["FileNotFoundError: [Errno 2] No such file or directory: '/Users/alberthan/youtube-dl.conf'\n"]
+["FileNotFoundError: [Errno 2] No such file or directory: '/Users/alberthan/youtube-dl.conf.txt'\n"]

@@ -1,5 +1,6 @@
 #// vscode-fold=1
 import pickle, regex
+import pandas as pd
 import urllib, http, optparse
 from urllib.parse import urlparse, ParseResult
 from validator_collection import validators, checkers
@@ -7,7 +8,7 @@ from hunter import CallPrinter
 from ipdb import set_trace as st
 import sys, shelve, re
 from typing import Iterable
-import stackprinter
+import stackprinter, prettyprinter
 from bs4 import BeautifulSoup
 from pathlib import Path
 from pprint import pformat
@@ -26,6 +27,40 @@ def info(o):
   typ = type(o)
   s = f"\n\n{typ}, {lng}\n{repr(o)}\n\n"
   return s
+
+def auto_repr(obj):
+  try:
+    class_name = obj.__class__.__name__
+    part_1 = f'<{class_name}: '
+    items = []
+    _d = obj.__dict__
+    d = {k:v for k,v in _d.items() if not (k.startswith('_'))}
+    for k,v in d.items():
+      try:
+        if is_class(v): nv = auto_repr(v)
+        elif isinstance(v,dict): nv = pformat(v)
+        else: nv = repr(v)
+        s = f'{k} = {nv}'
+        items.append(s)
+      except:
+        with open('auto_repr.log','w') as f:
+          f.write(f"{obj}")
+        raise SystemExit
+    secondary_indent = ' '*len(part_1)
+    part_2 = f',{secondary_indent}'.join(items)
+    return f'{part_1}{part_2}>'
+  except AttributeError:
+    with open('auto_repr.log','w') as f:
+      f.write(f"{obj}")
+    raise SystemExit
+
+def dict_prnt(d):
+  # prints relevant info i.e., truncates attrs starting with '_' or '__'
+  key_lst = list(d.keys())
+  key_lst2 = [k for k in key_lst if not (k.startswith('_') or k.startswith('__'))]
+  new_dct = {k:d[k] for k in key_lst2}
+  ns = prettyprinter.pformat(new_dct)
+  return ns
 
 def clr(s,category=""):
   blk,red,grn,ylw,blu,mag,cyn,wht = (
@@ -161,12 +196,21 @@ str_cnts_ang_brkt = StrCtnsAngBrkt()
 containers = Containers()
 
 def is_url(url):
-  with open('el162','a') as f:
-    f.write(f"{info(url)}\n")
   if checkers.is_url(url):
     result = validators.url(url)
     return result
   else:
+    with open('el162','a') as f:
+      f.write(
+        f"{info(url)}\n"
+      )
+    return False
+
+def is_regex(s):
+  try:
+    rgx = re.compile(s)
+    return rgx
+  except:
     return False
 
 def get_text_bs(html):
@@ -207,6 +251,9 @@ def process_vs(vs,depth=0,c=False):
     if not v:
       ns = "None" if not c else clr("None","none")
       new_vs.append(ns)
+    elif "%" in sv:
+      ns = sv
+      new_vs.append(ns)
     elif sv.lower() in ('true','false'): # bool
       ns_val = 'True' if sv.lower() == 'true' else 'False'
       ns = ns_val if not c else clr(ns_val,'bool')
@@ -216,6 +263,14 @@ def process_vs(vs,depth=0,c=False):
       new_vs.append(ns)
     elif is_url(v) or isinstance(v,ParseResult):
       ns = urlparse(v).geturl() if not c else clr(urlparse(v).geturl(),'url')
+      new_vs.append(ns)
+    elif rgx:=is_regex(sv):
+      ns =repr(rgx)
+      new_vs.append(ns)
+    elif isinstance(v,urllib.response.addinfourl) or isinstance(v,http.client.HTTPResponse):
+      v = v.__dict__
+      sv = auto_repr(v)
+      ns = process_vs(sv,depth=depth) if not c else process_vs(sv,depth=depth,c=True)
       new_vs.append(ns)
     elif sv.startswith("<"):
       if sv.startswith("<Values"):
@@ -236,12 +291,9 @@ def process_vs(vs,depth=0,c=False):
       else:
         try:
           if hasattr(v,'__dict__'):
-            d = v.__dict__
-            with open('el239','w') as f:
-              f.write(f"{v=}\n")
-              f.write(f"{d=}\n")
-              f.write(f"{'--'*40}\n")
-            ns = containers.process_dict(d,depth=depth) if not c else containers.process_dict(d,depth=depth,c=True)
+            # startswith any(['class','method','function'])
+            # ns = containers.process_dict(d,depth=depth) if not c else containers.process_dict(d,depth=depth,c=True)
+            ns = dict_prnt(v.__dict__)
             new_vs.append(ns)
           else:
             sv = sv[1:]
@@ -252,16 +304,15 @@ def process_vs(vs,depth=0,c=False):
           with open('el232','a') as f:
             f.write(stackprinter.format())
             f.write('='*80+"\n"+info(v))
-    elif isinstance(v,urllib.response.addinfourl) or isinstance(v,http.client.HTTPResponse):
-      v = v.__dict__
-      sv = repr(v)
-      ns = process_vs(sv,depth=depth) if not c else process_vs(sv,depth=depth,c=True)
+    elif len(sv) < 200:
+      rv = repr(v)
+      ns = rv if not c else clr(rv,'shortstr')
       new_vs.append(ns)
     elif containers(sv):
       d = {"[":containers.process_list,
         "{": containers.process_dict,
         "(": containers.process_list}
-      implies = lambda s: "[" in s or "{" in s or "(" in s
+      implies = lambda s: s.startswith("[") or s.startswith("{") or s.startswith("(")
       if isinstance(v,str):
         for k,v in d.items():
           if k in sv:
@@ -270,19 +321,28 @@ def process_vs(vs,depth=0,c=False):
               ns = d[k](evld,depth=depth)
               new_vs.append(ns)
             except:
-              with open('el272','w') as f:
-                f.write('could not eval possible container type\n')
-                f.write(f"{info(sv)}+\n")
-              if len(sv) < 200:
-                ns = sv
-                new_vs.append(ns)
-              else:
-                ns = d[k](sv,depth=depth)
-                new_vs.append(ns)
+              try:
+                if len(sv) < 200:
+                  ns = sv
+                  new_vs.append(ns)
+                else:
+                  ns = d[k](sv,depth=depth)
+                  new_vs.append(ns)
+              except:
+                with open('el272','a') as f:
+                  f.write(
+                    f'could not eval possible container type\n'
+                    f'key: {k}\n'
+                    f'value: {info(sv)}\n'
+                    f'stackprinter traceback:\n {stackprinter.format(sys.exc_info())}'
+                  )
           else:
-            with open('el283','w') as f:
-              f.write('im not sure y we are here\n')
-              f.write(sv+'\n')
+            with open('el283','a') as f:
+              f.write(
+                f'im not sure y we are here\n'
+                f'key: {k}\n'
+                f'value: {info(sv)}\n'
+              )
             raise SystemExit
         new_vs.append(ns)
       elif isinstance(v,list) or isinstance(v,dict) or isinstance(v,tuple):
@@ -298,10 +358,6 @@ def process_vs(vs,depth=0,c=False):
           f.write(stackprinter.format())
           f.write(info(v))
         raise SystemExit
-    elif len(sv) < 200:
-      rv = repr(v)
-      ns = rv if not c else clr(rv,'shortstr')
-      new_vs.append(ns)
     elif isinstance(v,CallPrinter):
       new_vs.append(repr(v))
     elif hasattr(v,'__name__'):
@@ -313,13 +369,12 @@ def process_vs(vs,depth=0,c=False):
       raise SystemExit
   return "\n".join(new_vs)
 
-if __name__ == "__main__":
-  pklpth = Path("/Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/bin/eventpickle/evtdcts_pklpth0.db")
+def open_shelf():
+  pklpth = Path("/Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/bin/eventpickle/eventpickle_hex")
   data = []
   with shelve.open(str(pklpth)) as s:
     evt_dcts = s['evt_dcts']
     # evt_dcts = s['evt_dcts']
-
   lsts = [e for e in evt_dcts if isinstance(e,list)]
   dcts = [e for e in evt_dcts if isinstance(e,dict)]
   dks = [list(itm.keys()) for itm in dcts]
@@ -333,7 +388,28 @@ if __name__ == "__main__":
   p(pds)
 
 
-
+if __name__ == "__main__":
+  pklpth = Path("/Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/bin/eventpickle/eventpickle_hex")
+  with open(pklpth,'r') as f:
+    lines = f.readlines()
+  print(len(lines))
+  lines_idxd = [(i,elm) for i,elm in zip(range(len(lines)), lines)]
+  decoded_lines = [bytes.fromhex(elm).strip() for elm in lines]
+  dlines_idxd = [(i,elm) for i,elm in zip(range(len(decoded_lines)), decoded_lines)]
+  unpkld_lines = [pickle.loads(elm) for elm in decoded_lines]
+  st()
+  d = {
+    "og_lines_hex": lines,
+    "bytes_from_hex": decoded_lines,
+    # "unpkld_lines": unpkld_lines,
+  }
+  df = pd.DataFrame(d)
+  for i,elm in enumerate(decoded_lines):
+    print(elm)
+    try:
+      print(pickle.loads(elm))
+    except: # i = 14574
+      st()
 """
  style: string
         'plaintext' (default): Output just text
@@ -366,3 +442,6 @@ if __name__ == "__main__":
         Example: To hide numpy internals from the traceback, set
         `suppressed_paths=[r"lib/python.*/site-packages/numpy"]`
 """
+
+
+

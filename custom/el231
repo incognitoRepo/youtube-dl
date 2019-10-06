@@ -1,0 +1,241 @@
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/YoutubeDL.py, line 807, in extract_info
+    770  def extract_info(self, url, download=True, ie_key=None, extra_info={},
+    771                   process=True, force_generic_extractor=False):
+ (...)
+    803                      'entries': ie_result,
+    804                  }
+    805              self.add_default_extra_info(ie_result, ie, url)
+    806              if process:
+--> 807                  return self.process_ie_result(ie_result, download, extra_info)
+    808              else:
+    ..................................................
+     self = <youtube_dl.YoutubeDL.YoutubeDL object at 0x116b40e50>
+     url = 'https://www.pornhub.com/view_video.php?viewkey=ph5d860f3594
+            9e1'
+     download = True
+     ie_key = None
+     extra_info = {}
+     process = True
+     force_generic_extractor = False
+     ie_result = {'id': 'ph5d860f35949e1',
+                  'uploader': 'Brantonro',
+                  'upload_date': '20190921',
+                  'title': 'Fucking nice teen girl in a car',
+                  'thumbnail': 'https://ci.phncdn.com/videos/201909/21/249833
+                  311/original/(m=eaAaGwObaaaa)(mh=iDZJsEVF5CSKSzSB)11.jpg',
+                  'duration': 72,
+                  'view_count': 1410871,
+                  'like_count': 3614,
+                  'dislike_count': 1211,
+                  'comment_count': 52,
+                  'formats': [{...}, {...}, {...}, ],
+                  'age_limit': 18,
+                  'tags': ['rough', 'big boobs', 'latin', 'teenager', 'young'
+                  , 'public', 'outside', 'milf', 'm...
+     self.add_default_extra_info = <method 'YoutubeDL.add_default_extra_info' of <youtube_dl.Yo
+                                    utubeDL.YoutubeDL object at 0x116b40e50> YoutubeDL.py:832>
+     ie = <youtube_dl.extractor.pornhub.PornHubIE object at 0x10f80122
+           0>
+     self.process_ie_result = <method 'YoutubeDL.process_ie_result' of <youtube_dl.Youtube
+                               DL.YoutubeDL object at 0x116b40e50> YoutubeDL.py:840>
+    ..................................................
+
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/YoutubeDL.py, line 861, in process_ie_result
+    840  def process_ie_result(self, ie_result, download=True, extra_info={}):
+ (...)
+    857              return ie_result
+    858  
+    859      if result_type == 'video':
+    860          self.add_extra_info(ie_result, extra_info)
+--> 861          return self.process_video_result(ie_result, download=download)
+    862      elif result_type == 'url':
+    ..................................................
+     self = <youtube_dl.YoutubeDL.YoutubeDL object at 0x116b40e50>
+     ie_result = {'id': 'ph5d860f35949e1',
+                  'uploader': 'Brantonro',
+                  'upload_date': '20190921',
+                  'title': 'Fucking nice teen girl in a car',
+                  'thumbnail': 'https://ci.phncdn.com/videos/201909/21/249833
+                  311/original/(m=eaAaGwObaaaa)(mh=iDZJsEVF5CSKSzSB)11.jpg',
+                  'duration': 72,
+                  'view_count': 1410871,
+                  'like_count': 3614,
+                  'dislike_count': 1211,
+                  'comment_count': 52,
+                  'formats': [{...}, {...}, {...}, ],
+                  'age_limit': 18,
+                  'tags': ['rough', 'big boobs', 'latin', 'teenager', 'young'
+                  , 'public', 'outside', 'milf', 'm...
+     download = True
+     extra_info = {}
+     result_type = 'video'
+     self.add_extra_info = <function 'YoutubeDL.add_extra_info' YoutubeDL.py:764>
+     self.process_video_result = <method 'YoutubeDL.process_video_result' of <youtube_dl.Yout
+                                  ubeDL.YoutubeDL object at 0x116b40e50> YoutubeDL.py:1410>
+    ..................................................
+
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/YoutubeDL.py, line 1633, in process_video_result
+    1410  def process_video_result(self, info_dict, download=True):
+ (...)
+    1629      }
+    1630  
+    1631      formats_to_download = list(format_selector(ctx))
+    1632      if not formats_to_download:
+--> 1633          raise ExtractorError('requested format not available',
+    1634                               expected=True)
+    ..................................................
+     self = <youtube_dl.YoutubeDL.YoutubeDL object at 0x116b40e50>
+     info_dict = {'id': 'ph5d860f35949e1',
+                  'uploader': 'Brantonro',
+                  'upload_date': '20190921',
+                  'title': 'Fucking nice teen girl in a car',
+                  'thumbnail': 'https://ci.phncdn.com/videos/201909/21/249833
+                  311/original/(m=eaAaGwObaaaa)(mh=iDZJsEVF5CSKSzSB)11.jpg',
+                  'duration': 72,
+                  'view_count': 1410871,
+                  'like_count': 3614,
+                  'dislike_count': 1211,
+                  'comment_count': 52,
+                  'formats': [{...}, {...}, {...}, ],
+                  'age_limit': 18,
+                  'tags': ['rough', 'big boobs', 'latin', 'teenager', 'young'
+                  , 'public', 'outside', 'milf', 'm...
+     download = True
+     formats_to_download = []
+     format_selector = <function 'YoutubeDL.build_format_selector.<locals>._build_s
+                        elector_function.<locals>.selector_function' YoutubeDL.py:12
+                        34>
+     ctx = {'formats': [{...}, {...}, {...}, ],
+            'incomplete_formats': False}
+     ExtractorError = <class 'youtube_dl.utils.ExtractorError'>
+    ..................................................
+
+---- (full traceback above) ----
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/YoutubeDL.py, line 807, in extract_info
+    return self.process_ie_result(ie_result, download, extra_info)
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/YoutubeDL.py, line 861, in process_ie_result
+    return self.process_video_result(ie_result, download=download)
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/YoutubeDL.py, line 1633, in process_video_result
+    raise ExtractorError('requested format not available',
+
+ExtractorError: requested format not availableFile /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/YoutubeDL.py, line 807, in extract_info
+    770  def extract_info(self, url, download=True, ie_key=None, extra_info={},
+    771                   process=True, force_generic_extractor=False):
+ (...)
+    803                      'entries': ie_result,
+    804                  }
+    805              self.add_default_extra_info(ie_result, ie, url)
+    806              if process:
+--> 807                  return self.process_ie_result(ie_result, download, extra_info)
+    808              else:
+    ..................................................
+     self = <youtube_dl.YoutubeDL.YoutubeDL object at 0x10f244a90>
+     url = 'https://www.pornhub.com/view_video.php?viewkey=ph5d860f3594
+            9e1'
+     download = True
+     ie_key = None
+     extra_info = {}
+     process = True
+     force_generic_extractor = False
+     ie_result = {'id': 'ph5d860f35949e1',
+                  'uploader': 'Brantonro',
+                  'upload_date': '20190921',
+                  'title': 'Fucking nice teen girl in a car',
+                  'thumbnail': 'https://di.phncdn.com/videos/201909/21/249833
+                  311/original/(m=eaAaGwObaaaa)(mh=iDZJsEVF5CSKSzSB)11.jpg',
+                  'duration': 72,
+                  'view_count': 1413008,
+                  'like_count': 3616,
+                  'dislike_count': 1211,
+                  'comment_count': 52,
+                  'formats': [{...}, {...}, {...}, ],
+                  'age_limit': 18,
+                  'tags': ['rough', 'big boobs', 'latin', 'teenager', 'young'
+                  , 'public', 'outside', 'milf', 'm...
+     self.add_default_extra_info = <method 'YoutubeDL.add_default_extra_info' of <youtube_dl.Yo
+                                    utubeDL.YoutubeDL object at 0x10f244a90> YoutubeDL.py:832>
+     ie = <youtube_dl.extractor.pornhub.PornHubIE object at 0x1099155e
+           0>
+     self.process_ie_result = <method 'YoutubeDL.process_ie_result' of <youtube_dl.Youtube
+                               DL.YoutubeDL object at 0x10f244a90> YoutubeDL.py:840>
+    ..................................................
+
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/YoutubeDL.py, line 861, in process_ie_result
+    840  def process_ie_result(self, ie_result, download=True, extra_info={}):
+ (...)
+    857              return ie_result
+    858  
+    859      if result_type == 'video':
+    860          self.add_extra_info(ie_result, extra_info)
+--> 861          return self.process_video_result(ie_result, download=download)
+    862      elif result_type == 'url':
+    ..................................................
+     self = <youtube_dl.YoutubeDL.YoutubeDL object at 0x10f244a90>
+     ie_result = {'id': 'ph5d860f35949e1',
+                  'uploader': 'Brantonro',
+                  'upload_date': '20190921',
+                  'title': 'Fucking nice teen girl in a car',
+                  'thumbnail': 'https://di.phncdn.com/videos/201909/21/249833
+                  311/original/(m=eaAaGwObaaaa)(mh=iDZJsEVF5CSKSzSB)11.jpg',
+                  'duration': 72,
+                  'view_count': 1413008,
+                  'like_count': 3616,
+                  'dislike_count': 1211,
+                  'comment_count': 52,
+                  'formats': [{...}, {...}, {...}, ],
+                  'age_limit': 18,
+                  'tags': ['rough', 'big boobs', 'latin', 'teenager', 'young'
+                  , 'public', 'outside', 'milf', 'm...
+     download = True
+     extra_info = {}
+     result_type = 'video'
+     self.add_extra_info = <function 'YoutubeDL.add_extra_info' YoutubeDL.py:764>
+     self.process_video_result = <method 'YoutubeDL.process_video_result' of <youtube_dl.Yout
+                                  ubeDL.YoutubeDL object at 0x10f244a90> YoutubeDL.py:1410>
+    ..................................................
+
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/YoutubeDL.py, line 1633, in process_video_result
+    1410  def process_video_result(self, info_dict, download=True):
+ (...)
+    1629      }
+    1630  
+    1631      formats_to_download = list(format_selector(ctx))
+    1632      if not formats_to_download:
+--> 1633          raise ExtractorError('requested format not available',
+    1634                               expected=True)
+    ..................................................
+     self = <youtube_dl.YoutubeDL.YoutubeDL object at 0x10f244a90>
+     info_dict = {'id': 'ph5d860f35949e1',
+                  'uploader': 'Brantonro',
+                  'upload_date': '20190921',
+                  'title': 'Fucking nice teen girl in a car',
+                  'thumbnail': 'https://di.phncdn.com/videos/201909/21/249833
+                  311/original/(m=eaAaGwObaaaa)(mh=iDZJsEVF5CSKSzSB)11.jpg',
+                  'duration': 72,
+                  'view_count': 1413008,
+                  'like_count': 3616,
+                  'dislike_count': 1211,
+                  'comment_count': 52,
+                  'formats': [{...}, {...}, {...}, ],
+                  'age_limit': 18,
+                  'tags': ['rough', 'big boobs', 'latin', 'teenager', 'young'
+                  , 'public', 'outside', 'milf', 'm...
+     download = True
+     formats_to_download = []
+     format_selector = <function 'YoutubeDL.build_format_selector.<locals>._build_s
+                        elector_function.<locals>.selector_function' YoutubeDL.py:12
+                        34>
+     ctx = {'formats': [{...}, {...}, {...}, ],
+            'incomplete_formats': False}
+     ExtractorError = <class 'youtube_dl.utils.ExtractorError'>
+    ..................................................
+
+---- (full traceback above) ----
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/YoutubeDL.py, line 807, in extract_info
+    return self.process_ie_result(ie_result, download, extra_info)
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/YoutubeDL.py, line 861, in process_ie_result
+    return self.process_video_result(ie_result, download=download)
+File /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/youtube_dl/YoutubeDL.py, line 1633, in process_video_result
+    raise ExtractorError('requested format not available',
+
+ExtractorError: requested format not available
