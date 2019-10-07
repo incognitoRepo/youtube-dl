@@ -3428,7 +3428,12 @@ def setproctitle(title):
         return
 
     try:
-        libc = ctypes.cdll.LoadLibrary('libc.so.6')
+        import platform
+        import ctypes.util, ctypes
+        libc = ctypes.cdll.LoadLibrary(ctypes.util.find_library('c'))
+        # libc = ctypes.cdll.LoadLibrary('/usr/lib/libc.dylib')
+        # libc = ctypes.cdll.LoadLibrary("libc.{}".format("so.6" if platform.uname()[0] != "Darwin" else "dylib"))
+        # ctypes.CDLL("libc.{}".format("so.6" if platform.uname()[0] != "Darwin" else "dylib"))
     except OSError:
         return
     except TypeError:
@@ -3436,11 +3441,12 @@ def setproctitle(title):
         # a bytestring, but since unicode_literals turns
         # every string into a unicode string, it fails.
         return
+    # title = 'adf'
     title_bytes = title.encode('utf-8')
     buf = ctypes.create_string_buffer(len(title_bytes))
     buf.value = title_bytes
     try:
-        libc.prctl(15, buf, 0, 0, 0)
+        libc['prctl'](15, buf, 0, 0, 0)
     except AttributeError:
         return  # Strange libc, just skip this
 

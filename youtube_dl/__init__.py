@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/Users/alberthan/VSCodeProjects/vytd/bin/ python3
 # coding: utf-8
 
 from __future__ import unicode_literals
@@ -56,7 +56,8 @@ def _real_main(argv=None):
     setproctitle('youtube-dl')
 
     parser, opts, args = parseOpts(argv)
-
+    with open('in','w') as f:
+      f.write(str(parser))
     # Set user agent
     if opts.user_agent is not None:
         std_headers['User-Agent'] = opts.user_agent

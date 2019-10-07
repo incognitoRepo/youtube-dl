@@ -16,6 +16,7 @@ if __package__ is None and not hasattr(sys, 'frozen'):
 import youtube_dl
 import hunter
 from youtube_dl.hunterconfig import QueryConfig
+from prettyprinter import cpprint
 from hunter.tracer import Tracer
 from pathlib import Path
 from pdb import set_trace as st
@@ -23,12 +24,14 @@ import os, io, stackprinter
 import pickle, sys
 from optparse import OptionParser
 from types import GeneratorType
+from ansi2html import Ansi2HTMLConverter
 
 test = True
 output = True
 dcts = []
 
 if __name__ == '__main__':
+  print(f"\x1b[0;36m{youtube_dl}\x1b[0m")
   qc = QueryConfig()
   qcfg = qc.eventpickle()
   tracer = Tracer()
@@ -47,10 +50,15 @@ if __name__ == '__main__':
       tracer.stop()
       if output:
         outval = output.getvalue()
+        conv = Ansi2HTMLConverter()
+        html = conv.convert(outval)
         output.close()
         with open(outvalpth:=filename.parent.joinpath('output.log'),'w') as f:
           f.write(outval)
-        print(f"wrote output value to {outvalpth}")
+          print(f"wrote output value to {outvalpth}")
+        with open(htmlpth:=filename.parent.joinpath('output.html','w')) as f:
+          f.write(html)
+          print(f"wrote html output to {htmlpth}")
       evt_dcts = action.read_from_pickle()
       dcts.append(evt_dcts)
     except BaseException as exc:

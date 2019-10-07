@@ -365,7 +365,6 @@ def process_vs(vs,depth=0,c=False):
     else:
       with open('el231','a') as f:
         f.write(stackprinter.format())
-        f.write('error: process_vs. final else','\n',sv)
       raise SystemExit
   return "\n".join(new_vs)
 
@@ -389,21 +388,57 @@ def open_shelf():
 
 
 if __name__ == "__main__":
-  pklpth = Path("/Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/bin/eventpickle/eventpickle_hex")
+  pklpth = Path("/Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/eventpickle/eventpickle_hex")
   with open(pklpth,'r') as f:
     lines = f.readlines()
   print(len(lines))
   lines_idxd = [(i,elm) for i,elm in zip(range(len(lines)), lines)]
   decoded_lines = [bytes.fromhex(elm).strip() for elm in lines]
   dlines_idxd = [(i,elm) for i,elm in zip(range(len(decoded_lines)), decoded_lines)]
-  unpkld_lines = [pickle.loads(elm) for elm in decoded_lines]
+
+  def load_pkld_line(ln): 
+    ldd = pickle.loads(ln)
+    if isinstance(ldd,list):
+      ldd = ["" if elm is None else elm for elm in ldd]
+    return ldd
+  unpkld_lines = [load_pkld_line(elm) for elm in decoded_lines]
+
+  def safe_join(i,line):
+    if not isinstance(line,list):
+      return line
+    try:
+      jdl = "\n".join(line)
+      return jdl
+    except TypeError:
+      _ = [f"{elm.__module__}.{elm.__name__}" for elm in line]
+      jdl = "\n".join(_)
+      return jdl
+    except:
+      print(i+'\n'+stackprinter.format(sys.exc_info()))
+      raise SystemExit
+      # if isinstance(ldd,list) and len(ldd)==1 and isinstance(ldd[0],str):
+      #   ldd = ldd[0]
+      # elif isinstance(ldd,list) and all([isinstance(elm,str) for elm in ldd]):
+      #   ldd = "\n".join([str(elm)])
+      # return ldd
+  unpkld_jd = [safe_join(i,elm) for i,elm in enumerate(unpkld_lines)]
+
+
+  with open("unpkld_lines","w") as f:
+    f.write("\n".join(unpkld_lines))
+  line_types = [type(elm) for elm in unpkld_lines]
   st()
   d = {
-    "og_lines_hex": lines,
-    "bytes_from_hex": decoded_lines,
-    # "unpkld_lines": unpkld_lines,
+    # "og_lines_hex": lines,
+    # "bytes_from_hex": decoded_lines,
+    "line_types": line_types,
+    "unpkld_lines": unpkld_lines,
   }
   df = pd.DataFrame(d)
+  df['idx1'] = df.index
+  df2 = df[df.line_types == list]
+  llst,lli = list(df2.unpkld_lines),list(df2.idx1)
+
   for i,elm in enumerate(decoded_lines):
     print(elm)
     try:

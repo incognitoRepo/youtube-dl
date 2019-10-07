@@ -1,0 +1,14 @@
+#!/Users/alberthan/VSCodeProjects/vytd/bin/ python3
+import youtube_dl
+import hunter
+from youtube_dl.hunterconfig import QueryConfig
+from hunter.tracer import Tracer
+from pathlib import Path
+from pdb import set_trace as st
+import os
+import pickle, sys
+
+test = False
+
+if __name__ == '__main__':
+  pass

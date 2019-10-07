@@ -1,5 +1,0 @@
-(<class 'OSError'>, OSError('dlopen(libc.so.6, 6): image not found'), <traceback object at 0x10e468c80>)
-{'version': '2019.09.12.1', 'formatter': <optparse.IndentedHelpFormatter object at 0x10e46ffa0>, 'usage': '%prog [OPTIONS] URL [URL...]', 'conflict_handler': 'resolve'}
-['aria2c', 'avconv', 'axel', 'curl', 'ffmpeg', 'httpie', 'wget']
-['https://xhamster.com/videos/khloe-gets-fucked-doggystyle-11663353#mlrelated']
-(<class 'FileNotFoundError'>, FileNotFoundError(2, 'No such file or directory'), <traceback object at 0x10c137d40>)

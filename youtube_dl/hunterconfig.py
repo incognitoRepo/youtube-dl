@@ -618,6 +618,7 @@ class CustomPrinter(CallPrinter):
       f.write(sj+"\n\n")
 
   def filename_prefix(self, event=None, count=None):
+    FilenamePrefix = namedtuple('FilenamePrefix', 'mono poly')
     og_index = f"{count:0>5}"
     if event:
       filename = Path(event.filename) or '<???>'
@@ -635,7 +636,8 @@ class CustomPrinter(CallPrinter):
         f"{filename3:_>{self.filename_alignment}}{self.other_colors['COLON']}:"
         f"({self.other_colors['LINENO']}{event.lineno:0>5}|{og_index})"
       )
-      return ms,ps
+      filename_prefix = FilenamePrefix(ms,ps)
+      return filename_prefix
     else:
       print('error in filename_prefix')
       st()
@@ -814,36 +816,39 @@ class CustomPrinter(CallPrinter):
       except EOFError:
         raise
 
-  def write_to_pickle(self,arg,i=0):
-    Pkl = namedtuple('Pkl', 'raw_value pkld_bytes')
+  def write_to_pickle(self,arg,h_idx=0):
+    Pkl = namedtuple('Pkl', 'raw_value pkld_bytes h_idx')
     if not arg or arg == None: return
-    if i == 14572:
-      with open('hc812','a') as f:
-        f.write(
-          f"{i}: {type(arg)}\n"
-          f"{i}: {repr(arg)}\n"
-          f"{isinstance(arg,addinfourl)}\n"
-          # f"{arg.__class__name=}\n"
-          f"{auto_repr(arg)}\n"
-          f"{is_io(arg)=}\n")
+    # if h_idx == 14572:
+      # with open('hc812','a') as f:
+        # f.write(
+        #   f"{i}: {type(arg)}\n"
+        #   f"{i}: {repr(arg)}\n"
+        #   f"{isinstance(arg,addinfourl)}\n"
+        #   # f"{arg.__class__name=}\n"
+        #   f"{auto_repr(arg)}\n"
+        #   f"{is_io(arg)=}\n")
     pkld_bytes = ""
     lvl1sep = f"\n{'-'*80}\n"
     lvl2sep = f"\n  {'-'*60}\n  "
 
     def main(arg) -> bool:
-      og_arg = arg
-      cleaned_arg = make_event_arg_pickleable(arg)
-      pkld_bytes = get_pickled_bytes(cleaned_arg)
-      return_value = write_to_disk(pkld_bytes,og_arg,debug=True)
-      print(arg,pkld_bytes)
-      # assert return_value
-      return return_value
+      try:
+        og_arg = arg
+        cleaned_arg = make_event_arg_pickleable(arg)
+        pkld = get_pickled_bytes(cleaned_arg,h_idx)
+        return_value = write_to_disk(pkld,og_arg,debug=True)
+        return return_value
+      except:
+        with open('hc843.log','w') as f:
+          f.write(stackprinter.format(sys.exc_info()))
 
     def make_event_arg_pickleable(arg,keep=False):
       if isinstance(arg,tuple) and (len(arg) == 3 or len(arg) == 2):
         if isinstance(arg[1],BaseException):
           assert arg[2] is None or isinstance(arg[2],TracebackType), f"{info(arg)}"
           arg = traceback.format_exception_only(arg[0],arg[1])
+          # arg = traceback.format_exception(arg[0],arg[1])
         else:
           raise SystemExit
       elif isinstance(arg,addinfourl):
@@ -856,16 +861,16 @@ class CustomPrinter(CallPrinter):
         arg = arg
       return arg
 
-    def get_pickled_bytes(cleaned_arg):
+    def get_pickled_bytes(cleaned_arg,h_idx):
       arg = cleaned_arg
       try:
-        pkld_bytes = Pkl(arg, pickle.dumps(arg))
+        pkld_bytes = Pkl(arg, pickle.dumps(arg), h_idx)
         return pkld_bytes
       except pickle.PickleError as err:
         if is_class(arg) or is_instance(arg):
           try:
             arg = auto_repr(arg)
-            pkld_bytes = Pkl(arg, pickle.dumps(arg))
+            pkld_bytes = Pkl(arg, pickle.dumps(arg), h_idx)
             return pkld_bytes
           except:
             print("PickleError Unresolved")
@@ -874,11 +879,11 @@ class CustomPrinter(CallPrinter):
             raise SystemExit
         elif isinstance(arg,list):
           _ = [self.write_to_pickle(elm) for elm in arg]
-          pkld_bytes = Pkl(_, pickle.dumps(_))
+          pkld_bytes = Pkl(_, pickle.dumps(_), h_idx)
           return pkld_bytes
         elif has_dct(arg):
           _ = has_dct(arg)
-          pkld_bytes = Pkl(_, pickle.dumps(_))
+          pkld_bytes = Pkl(_, pickle.dumps(_), h_idx)
           return pkld_bytes
         else:
           print("PickleError Unresolved 2")
@@ -887,8 +892,8 @@ class CustomPrinter(CallPrinter):
       except AttributeError as err:
         if isinstance(arg,tuple):
           try:
-            pkld_bytes = [self.write_to_pickle(elm) for elm in arg]
-            pkld_bytes = Pkl(pkld_bytes, pickle.dumps(pkld_bytes))
+            _ = [self.write_to_pickle(elm) for elm in arg]
+            pkld_bytes = Pkl(pkld_bytes, pickle.dumps(_), h_idx)
             return pkld_bytes
           except:
             print(self.write_to_pickle(arg[0]))
@@ -896,11 +901,11 @@ class CustomPrinter(CallPrinter):
             raise SystemExit
         elif is_class(arg):
           arg = auto_repr(arg)
-          pkld_bytes = Pkl(arg, pickle.dumps(arg))
+          pkld_bytes = Pkl(arg, pickle.dumps(arg), h_idx)
           return pkld_bytes
         elif is_instance(arg):
           arg = auto_repr(arg)
-          pkld_bytes = Pkl(arg, pickle.dumps(arg))
+          pkld_bytes = Pkl(arg, pickle.dumps(arg), h_idx)
           return pkld_bytes
         elif isinstance(arg,dict):
           try:
@@ -908,21 +913,21 @@ class CustomPrinter(CallPrinter):
             for k,v in arg.items():
               lst.append(f"{k}: {repr(v)}")
             _ = "\n".join(lst)
-            pkld_bytes = Pkl(_,pickle.dumps(_))
+            pkld_bytes = Pkl(_, pickle.dumps(_), h_idx)
             return pkld_bytes
           except:
             print("AttributeError Unresolved 2")
         elif inspect.isfunction(arg):
           try:
             _ = is_function(arg)
-            pkld_bytes = Pkl(_, pickle.dumps(_))
+            pkld_bytes = Pkl(_, pickle.dumps(_), h_idx)
             return pkld_bytes
           except:
             print("AttributeError Unresolved 4")
             raise SystemExit
         elif isinstance(arg,list):
           _ = [self.write_to_pickle(elm) for elm in arg]
-          pkld_bytes = Pkl(_, pickle.dumps(_))
+          pkld_bytes = Pkl(_, pickle.dumps(_), h_idx)
           return pkld_bytes
         else:
           print(lvl2sep,"AttributeError Unresolved 3")
@@ -934,7 +939,7 @@ class CustomPrinter(CallPrinter):
         if isinstance(arg,tuple):
           if is_class(arg[0]):
             _ = auto_repr(arg[0])
-            pkld_bytes = Pkl(_,pickle.dumps(_))
+            pkld_bytes = Pkl(_, pickle.dumps(_), h_idx)
             return pkld_bytes
           else:
             debug_error(arg,auto_repr(arg[0]),"TypeError")
@@ -946,7 +951,7 @@ class CustomPrinter(CallPrinter):
             for k,v in arg.items():
               lst.append(f"{k}: {repr(v)}")
             _ = "\n".join(lst)
-            pkld_bytes = Pkl(_,pickle.dumps(_))
+            pkld_bytes = Pkl(_, pickle.dumps(_), h_idx)
             return pkld_bytes
           except:
             print("TypeError Unresolved 2")
@@ -959,7 +964,7 @@ class CustomPrinter(CallPrinter):
             for k,v in d.items():
               lst.append(f"{k}: {repr(v)}")
             _ = "\n".join(lst)
-            pkld_bytes = Pkl(_,pickle.dumps(_))
+            pkld_bytes = Pkl(_, pickle.dumps(_), h_idx)
             return pkld_bytes
           except:
             print("TypeError Unresolved 3")
@@ -967,7 +972,7 @@ class CustomPrinter(CallPrinter):
         elif isinstance(arg,GeneratorType):
           try:
             _ = repr(list(arg))
-            pkld_bytes = Pkl(_,pickle.dumps(_))
+            pkld_bytes = Pkl(_, pickle.dumps(_), h_idx)
             return pkld_bytes
           except:
             print("TypeError Unresolved 4")
@@ -982,22 +987,87 @@ class CustomPrinter(CallPrinter):
         print()
         raise SystemExit
 
-    def write_to_disk(pkld_bytes,og_arg=None,debug=False):
-      pkld_obj, pkld_bytes = pkld_bytes
+    def write_to_disk(pkld,og_arg=None,debug=False):
+      pkld_obj, pkld_bytes, h_idx = pkld
+      og_arg = (h_idx,repr(og_arg))
+      pkld_obj = (h_idx,repr(pkld_obj))
+      pkld_strhex = (h_idx, pkld_bytes.hex())
       if debug:
         pkld_strori = Path(self.pickle_path).parent.joinpath('eventpickle_ori')
         with open(pkld_strori,'a') as f:
-          f.write(repr(og_arg)+'\n')
+          f.write(og_arg+'\n')
         pkld_strarg = Path(self.pickle_path).parent.joinpath('eventpickle_arg')
         with open(pkld_strarg,'a') as f:
-          f.write(repr(pkld_obj)+'\n')
+          f.write(pkld_obj+'\n')
       pkld_strhex = Path(self.pickle_path).parent.joinpath('eventpickle_hex')
       with open(pkld_strhex,'a') as f:
-        pkld_strhex = pkld_bytes.hex()
         f.write(pkld_strhex+'\n')
       return pkld_strhex
 
     main(arg)
+
+  def write_supplemental_pickle(
+    self,
+    filename_prefix,
+    evt_knd,
+    stack,
+    evt_fnc,
+    evt_src,
+    h_idx):
+    Supplement = namedtuple('Supplement',
+      'filename_prefix event_kind stack event_function event_source h_idx')
+    SupplementalField = namedtuple('SupplementalField',
+      'mono poly')
+    symbdct = {"call":"=>","line":"","exception":"!!","return":"<="}
+
+    def main():
+      try:
+        supp_obj = make_supplemental()
+        pkld = get_pickled(supp_obj)
+        retval = write_pickled(pkld)
+        return retval
+      except:
+        with open('hc1027.log','w') as f:
+          f.write(stackprinter.format(sys.exc_info()))
+
+    def make_supplemental():
+      supp = Supplement(
+        filename_prefix = SupplementalField(
+          filename_prefix.mono,
+          filename_prefix.poly),
+        event_kind = SupplementalField(
+          f"{evt_knd:9} ",
+          f"{self.clrs(evt_knd,'KIND'):9} "),
+        stack = SupplementalField(
+          f"{'   ' * (len(stack) - 1)}",
+          f"{'   ' * (len(stack) - 1)}"),
+        event_symbol = SupplementalField(
+          symbdct[evt_knd],
+          f"{self.clrs(symbdct[evt_knd],'COLOR')} "),
+        event_function = SupplementalField(
+          evt_fnc,evt_fnc),
+        event_source = SupplementalField(
+          evt_src.strip(),evt_src.strip()),
+        h_idx = SupplementalField(
+          h_idx,h_idx
+        )
+      )
+      return supp
+
+    def get_pickled(supp_obj):
+      pkld_bytes = pickle.dumps(supp_obj)
+
+    def write_pickled(pkld):
+      pkld_pth = Path(self.pickle_path).parent.joinpath('eventpickle_supp_obj')
+      phex_pth = Path(self.pickle_path).parent.joinpath('eventpickle_supp_hex')
+      pobj,phex = repr(pkld),pkld.hex()
+      with open(pkld_pth,'a') as f:
+        f.write(pobj+'\n')
+      with open(phex_pth,'a') as f:
+        f.write(phex+'\n')
+      return True
+
+    main()
 
   def write_to_shelf(self,fmtd_arg):
     if not edct: return
@@ -1032,8 +1102,8 @@ class CustomPrinter(CallPrinter):
 
   def __call__(self, event):
     count = next(self.count)
-    fmtd_arg = self.process_event_arg(event.arg)
-    self.write_to_pickle(event.arg,i=count)
+    # fmtd_arg = self.process_event_arg(event.arg)
+    self.write_to_pickle(event.arg,h_idx=count)
 
     ident = event.module, event.function
 
@@ -1042,70 +1112,101 @@ class CustomPrinter(CallPrinter):
 
     pid_prefix = self.pid_prefix()
     thread_prefix = self.thread_prefix(event)
-    filename_prefix_mono,filename_prefix_poly = self.filename_prefix(event,count)
-    evt_dct = self.event_dict(event,count)
+    filename_prefix = self.filename_prefix(event,count)
     if event.kind == 'call':
       # :event.arg: None = None
       code = event.code
       stack.append(ident)
-      output = self.output_format(
-        '{}{KIND}{:9} {}{COLOR}=>{NORMAL} {}({}{COLOR}{NORMAL}){RESET}\n',
+      # output = self.output_format(
+        # '{}{KIND}{:9} {}{COLOR}=>{NORMAL} {}({}{COLOR}{NORMAL}){RESET}\n',
         # pid_prefix,
         # thread_prefix,
-        filename_prefix_poly,
+        # filename_prefix_poly,
+        # event.kind,
+        # '   ' * (len(stack) - 1),
+        # event.function,
+        # ', '.join('{VARS}{VARS-NAME}{0}{VARS}={RESET}{1}'.format(
+        #   var,
+        #   event.locals.get(var, MISSING) if event.detached else self.try_repr(event.locals.get(var, MISSING)),
+        #   **self.other_colors
+        # ) for var in code.co_varnames[:code.co_argcount]),
+        # COLOR=self.event_colors.get(event.kind),
+        # )
+      # self.write_output(output)
+      self.write_supplemental_pickle(
+        filename_prefix,
         event.kind,
-        '   ' * (len(stack) - 1),
+        stack,
         event.function,
-        ', '.join('{VARS}{VARS-NAME}{0}{VARS}={RESET}{1}'.format(
-          var,
-          event.locals.get(var, MISSING) if event.detached else self.try_repr(event.locals.get(var, MISSING)),
-          **self.other_colors
-        ) for var in code.co_varnames[:code.co_argcount]),
-        COLOR=self.event_colors.get(event.kind),
+        event.source,
+        count
       )
-      self.write_output(output)
     elif event.kind == 'exception':
       # :event.arg: tuple = (exception, value, traceback)
-      output = self.output_format(
-        '{}{KIND}{:9} {}{COLOR} !{NORMAL} {}: {RESET}{}\n',
-        # pid_prefix,
-        # thread_prefix,
-        filename_prefix_poly,
+      # output = self.output_format(
+        # '{}{KIND}{:9} {}{COLOR} !{NORMAL} {}: {RESET}{}\n',
+        # # pid_prefix,
+        # # thread_prefix,
+        # filename_prefix_poly,
+        # event.kind,
+        # '   ' * (len(stack) - 1),
+        # event.function,
+        # event.arg if event.detached else self.try_repr(event.arg),
+        # COLOR=self.event_colors.get(event.kind),
+        # )
+      # self.write_output(output)
+      self.write_supplemental_pickle(
+        filename_prefix,
         event.kind,
-        '   ' * (len(stack) - 1),
+        stack,
         event.function,
-        event.arg if event.detached else self.try_repr(event.arg),
-        COLOR=self.event_colors.get(event.kind),
+        event.source,
+        count
       )
-      self.write_output(output)
     elif event.kind == 'return':
       # :event.arg: = return value or `None` if exception
-      output = self.output_format(
-        '{}{KIND}{:9} {}{COLOR}<={NORMAL} {}: {RESET}{}\n',
-        # pid_prefix,
-        # thread_prefix,
-        filename_prefix_poly,
+      # output = self.output_format(
+        # '{}{KIND}{:9} {}{COLOR}<={NORMAL} {}: {RESET}{}\n',
+        # # pid_prefix,
+        # # thread_prefix,
+        # filename_prefix_poly,
+        # event.kind,
+        # '   ' * (len(stack) - 1),
+        # event.function,
+        # event.arg if event.detached else self.try_repr(event.arg),
+        # COLOR=self.event_colors.get(event.kind),
+        # )
+      # self.write_output(output)
+      self.write_supplemental_pickle(
+        filename_prefix,
         event.kind,
-        '   ' * (len(stack) - 1),
+        stack,
         event.function,
-        event.arg if event.detached else self.try_repr(event.arg),
-        COLOR=self.event_colors.get(event.kind),
+        event.source,
+        count
       )
-      self.write_output(output)
       if stack and stack[-1] == ident:
         stack.pop()
     else:
       # :event.arg: = `None`
-      output = self.output_format(
-        '{}{KIND}{:9} {RESET}{}{}{RESET}\n',
-        # pid_prefix,
-        # thread_prefix,
-        filename_prefix_poly,
+      # output = self.output_format(
+        # '{}{KIND}{:9} {RESET}{}{}{RESET}\n',
+        # # pid_prefix,
+        # # thread_prefix,
+        # filename_prefix_poly,
+        # event.kind,
+        # '   ' * len(stack),
+        # self.try_source(event).strip(),
+        # )
+      # self.write_output(output)
+      self.write_supplemental_pickle(
+        filename_prefix,
         event.kind,
-        '   ' * len(stack),
-        self.try_source(event).strip(),
+        stack,
+        event.function,
+        event.source,
+        count
       )
-      self.write_output(output)
 
 def safe_repr(obj, maxdepth=5):
   if not maxdepth:
@@ -1182,7 +1283,7 @@ def has_dict(obj_type, obj, tolerance=25):
         return True
   return hasattr(obj, '__dict__')
 
-CustomPrinter.safe_repr = safe_repr
+# CustomPrinter.safe_repr = safe_repr
 
 class QueryConfig:
   """note: changes in __call__ methods are visible in ytdev not ytdf"""
@@ -1210,14 +1311,15 @@ class QueryConfig:
       fs.split()
 
   def eventpickle(self):
-    base_path = self.basedir.joinpath('bin/eventpickle').absolute()
+    base_path = self.basedir.joinpath('eventpickle').absolute()
     base_path.mkdir(parents=True,exist_ok=True)
     # pklpth = base.joinpath('evtdcts.pkl')
     actions = [
       CustomPrinter(
         # stream=io.StringIO(),
+        stream=sys.stdout,
         repr_limit=4096,
-        repr_func=safe_repr,
+        # repr_func=safe_repr,
         filename_alignment=10,
         force_colors=False,
         base_path=base_path,
