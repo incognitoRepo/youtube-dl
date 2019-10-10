@@ -200,10 +200,6 @@ def is_url(url):
     result = validators.url(url)
     return result
   else:
-    with open('el162','a') as f:
-      f.write(
-        f"{info(url)}\n"
-      )
     return False
 
 def is_regex(s):
@@ -389,6 +385,7 @@ def open_shelf():
 
 if __name__ == "__main__":
   pklpth = Path("/Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/eventpickle/eventpickle_hex")
+  suppth = Path("")
   with open(pklpth,'r') as f:
     lines = f.readlines()
   print(len(lines))
@@ -396,7 +393,7 @@ if __name__ == "__main__":
   decoded_lines = [bytes.fromhex(elm).strip() for elm in lines]
   dlines_idxd = [(i,elm) for i,elm in zip(range(len(decoded_lines)), decoded_lines)]
 
-  def load_pkld_line(ln): 
+  def load_pkld_line(ln):
     ldd = pickle.loads(ln)
     if isinstance(ldd,list):
       ldd = ["" if elm is None else elm for elm in ldd]

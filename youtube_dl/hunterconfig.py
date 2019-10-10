@@ -85,14 +85,14 @@ def auto_repr(obj):
         s = f'{k} = {nv}'
         items.append(s)
       except:
-        with open('auto_repr.log','w') as f:
+        with open('auto_repr.log','a') as f:
           f.write(f"{obj}")
         raise SystemExit
     secondary_indent = ' '*len(part_1)
     part_2 = f',{secondary_indent}'.join(items)
     return f'{part_1}{part_2}>'
   except AttributeError:
-    with open('auto_repr.log','w') as f:
+    with open('auto_repr.log','a') as f:
       f.write(f"{obj}")
     raise SystemExit
 
@@ -137,6 +137,13 @@ def debug_error(obj, err_type, attempted_str="", **funcs):
   with open(f"{filename}_err.log","w") as f:
     f.write(write_value)
   print(write_value)
+
+Supplement = namedtuple(
+  'Supplement',
+  'filename_prefix event_kind stack event_symbol event_function event_source h_idx')
+SupplementalField = namedtuple(
+  'SupplementalField',
+  'mono poly')
 
 @dataclass
 class Color:
@@ -604,6 +611,7 @@ class CustomPrinter(CallPrinter):
     self.shelf_path = base_path.joinpath('shelf')
     self.debugfilepth = Path('/Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/bin/debug.log')
     self.pklcnt = count()
+    self.clrs = Color().fore
     # self.old_fn = ""
 
   def write_to_debugfile(self,f,f2,f3,frv):
@@ -789,28 +797,23 @@ class CustomPrinter(CallPrinter):
     return prcsd
 
   def process_event_arg(self,a):
-    with open('hc690','a') as f:
-      f.write(info(a))
-    if not a: return
-    prcsd = process_dcts([{'prcsd':a}])
-    return prcsd
+    try:
+      if not a: return
+      prcsd = process_dcts([{'prcsd':a}])
+      return prcsd
+    except:
+      with open('hc798','a') as f:
+        f.write(info(a))
 
   def read_from_pickle(self):
     """Load each item that was previously written to disk."""
-    # result_lines = []
-    # with open(self.pickle_path, 'rb') as file:
-    #   try:
-    #     lines = file.readlines()
-    #     decoded_lines = [base64.b64decode(elm) for elm in lines]
-    #     unpkld_lines = [pickle.loads(elm) for elm in decoded_lines]
-    #     result_lines.append(unpkld_lines)
-    #   except EOFError:
-    #     pass
     pkld_strhex = Path(self.pickle_path).parent.joinpath('eventpickle_hex')
+    with open('hc804','a') as f:
+      f.write(str(pkld_strhex))
     with open(pkld_strhex, 'r') as file:
       try:
         lines = file.readlines()
-        decoded_lines = [bytes.fromhex(elm).strip() for elm in lines]
+        decoded_lines = [bytes.fromhex(elm) for elm in lines]
         unpkld_lines = [pickle.loads(elm) for elm in decoded_lines]
         return unpkld_lines
       except EOFError:
@@ -819,15 +822,6 @@ class CustomPrinter(CallPrinter):
   def write_to_pickle(self,arg,h_idx=0):
     Pkl = namedtuple('Pkl', 'raw_value pkld_bytes h_idx')
     if not arg or arg == None: return
-    # if h_idx == 14572:
-      # with open('hc812','a') as f:
-        # f.write(
-        #   f"{i}: {type(arg)}\n"
-        #   f"{i}: {repr(arg)}\n"
-        #   f"{isinstance(arg,addinfourl)}\n"
-        #   # f"{arg.__class__name=}\n"
-        #   f"{auto_repr(arg)}\n"
-        #   f"{is_io(arg)=}\n")
     pkld_bytes = ""
     lvl1sep = f"\n{'-'*80}\n"
     lvl2sep = f"\n  {'-'*60}\n  "
@@ -840,23 +834,24 @@ class CustomPrinter(CallPrinter):
         return_value = write_to_disk(pkld,og_arg,debug=True)
         return return_value
       except:
-        with open('hc843.log','w') as f:
+        with open('hc843.log','a') as f:
           f.write(stackprinter.format(sys.exc_info()))
 
     def make_event_arg_pickleable(arg,keep=False):
-      if isinstance(arg,tuple) and (len(arg) == 3 or len(arg) == 2):
-        if isinstance(arg[1],BaseException):
-          assert arg[2] is None or isinstance(arg[2],TracebackType), f"{info(arg)}"
+      if isinstance(arg,tuple) and isinstance(arg[1],BaseException):
+        assert arg[2] is None or isinstance(arg[2],TracebackType), f"{info(arg)}"
+        try:
           arg = traceback.format_exception_only(arg[0],arg[1])
-          # arg = traceback.format_exception(arg[0],arg[1])
-        else:
-          raise SystemExit
+        except:
+          return arg
       elif isinstance(arg,addinfourl):
-        with open('hc838','a') as f:
-          f.write(info(arg))
         arg = auto_repr(arg)
-        with open('hc838','a') as f:
-          f.write(arg)
+      elif isinstance(arg,OptionParser):
+        _ = arg.option_list
+        lambda nodctrepr = v: repr(v) if not isinstance(v,dict) else repr(v.keys())
+        arg = {k:nodctrepr(v) for k,v in _.items()}
+        with open('hc860.log','a') as f:
+          f.write("\n".join(arg))
       else:
         arg = arg
       return arg
@@ -896,7 +891,7 @@ class CustomPrinter(CallPrinter):
             pkld_bytes = Pkl(pkld_bytes, pickle.dumps(_), h_idx)
             return pkld_bytes
           except:
-            print(self.write_to_pickle(arg[0]))
+            print(self.write_to_pickle(arg))
             print("a.811")
             raise SystemExit
         elif is_class(arg):
@@ -989,22 +984,33 @@ class CustomPrinter(CallPrinter):
 
     def write_to_disk(pkld,og_arg=None,debug=False):
       pkld_obj, pkld_bytes, h_idx = pkld
-      og_arg = (h_idx,repr(og_arg))
-      pkld_obj = (h_idx,repr(pkld_obj))
-      pkld_strhex = (h_idx, pkld_bytes.hex())
+      og_arg = f"{h_idx}:\n{repr(og_arg)}\n"
+      pkld_obj = f"{h_idx}:\n{repr(pkld_obj)}\n"
+      pkld_hex = f"{h_idx}:\n{pkld_bytes.hex()}\n"
       if debug:
         pkld_strori = Path(self.pickle_path).parent.joinpath('eventpickle_ori')
         with open(pkld_strori,'a') as f:
-          f.write(og_arg+'\n')
+          f.write(og_arg)
         pkld_strarg = Path(self.pickle_path).parent.joinpath('eventpickle_arg')
         with open(pkld_strarg,'a') as f:
-          f.write(pkld_obj+'\n')
+          f.write(pkld_obj)
       pkld_strhex = Path(self.pickle_path).parent.joinpath('eventpickle_hex')
       with open(pkld_strhex,'a') as f:
-        f.write(pkld_strhex+'\n')
+        f.write(pkld_hex)
       return pkld_strhex
 
     main(arg)
+
+  def read_from_supplemental(self):
+    pkld_strhex = Path(self.pickle_path).parent.joinpath('eventpickle_supp_hex')
+    with open(pkld_strhex, 'r') as file:
+      try:
+        lines = file.readlines()
+        decoded_lines = [bytes.fromhex(elm).strip() for elm in lines]
+        unpkld_lines = [pickle.loads(elm) for elm in decoded_lines]
+        return unpkld_lines
+      except EOFError:
+        raise
 
   def write_supplemental_pickle(
     self,
@@ -1014,10 +1020,6 @@ class CustomPrinter(CallPrinter):
     evt_fnc,
     evt_src,
     h_idx):
-    Supplement = namedtuple('Supplement',
-      'filename_prefix event_kind stack event_function event_source h_idx')
-    SupplementalField = namedtuple('SupplementalField',
-      'mono poly')
     symbdct = {"call":"=>","line":"","exception":"!!","return":"<="}
 
     def main():
@@ -1027,7 +1029,7 @@ class CustomPrinter(CallPrinter):
         retval = write_pickled(pkld)
         return retval
       except:
-        with open('hc1027.log','w') as f:
+        with open('hc1027.log','a') as f:
           f.write(stackprinter.format(sys.exc_info()))
 
     def make_supplemental():
@@ -1043,7 +1045,7 @@ class CustomPrinter(CallPrinter):
           f"{'   ' * (len(stack) - 1)}"),
         event_symbol = SupplementalField(
           symbdct[evt_knd],
-          f"{self.clrs(symbdct[evt_knd],'COLOR')} "),
+          f"{self.clrs(symbdct[evt_knd],evt_knd.upper())} "),
         event_function = SupplementalField(
           evt_fnc,evt_fnc),
         event_source = SupplementalField(
@@ -1056,6 +1058,7 @@ class CustomPrinter(CallPrinter):
 
     def get_pickled(supp_obj):
       pkld_bytes = pickle.dumps(supp_obj)
+      return pkld_bytes
 
     def write_pickled(pkld):
       pkld_pth = Path(self.pickle_path).parent.joinpath('eventpickle_supp_obj')
@@ -1068,37 +1071,6 @@ class CustomPrinter(CallPrinter):
       return True
 
     main()
-
-  def write_to_shelf(self,fmtd_arg):
-    if not edct: return
-    with open('hc691','a') as f:
-      f.write(info(edct))
-    n = next(self.pklcnt)
-    filename = self.shelf_path
-    if not Path(f"{str(filename)}.db").exists():
-      with shelve.open(str(filename),flag='c') as s:
-        s['evt_dcts'] = [edct['fmtd_arg']]
-    else:
-      with shelve.open(str(filename),flag='w') as s:
-        assert 'evt_dcts' in s, repr(s.keys())
-        try:
-          evt_dcts = s['evt_dcts']
-          evt_dcts.append(edct['fmtd_arg'])
-          s['evt_dcts'] = evt_dcts
-        except:
-          with open('hc702','a') as f:
-            f.write(repr(edct))
-            f.write(stackprinter.format(sys.exc_info()))
-          raise SystemExit
-
-  def read_from_shelf(self):
-    with shelve.open(self.old_fn,flag='r') as s:
-      try:
-        # print(s['evt_dcts'])
-        evt_dcts = s['evt_dcts']
-        return evt_dcts
-      except dbm.error as err:
-        print('ERROR: {}'.format(err))
 
   def __call__(self, event):
     count = next(self.count)
@@ -1317,13 +1289,14 @@ class QueryConfig:
     actions = [
       CustomPrinter(
         # stream=io.StringIO(),
-        stream=sys.stdout,
+        # stream=sys.stdout,
         repr_limit=4096,
         # repr_func=safe_repr,
         filename_alignment=10,
-        force_colors=False,
+        # force_colors=False,
         base_path=base_path,
         ), # repr_limit=1024
+      # CallPrinter(),
     ]
     outputs = [action.stream for action in actions]
     filenames = [base_path.joinpath(filename).absolute() for filename in ['call.eventpickle.log']]

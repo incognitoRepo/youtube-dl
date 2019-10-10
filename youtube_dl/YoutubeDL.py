@@ -111,7 +111,7 @@ from .version import __version__
 if compat_os_name == 'nt':
     import ctypes
 
-
+from itertools import count
 class YoutubeDL(object):
     """YoutubeDL class.
 
@@ -1121,6 +1121,10 @@ class YoutubeDL(object):
         return '/'.join(req_format_list)
 
     def build_format_selector(self, format_spec):
+        cnt = count()
+        def wf(idx,arg=""):
+          with open('bfs.log','a') as f:
+            f.write(f"{idx=}\n{arg}\n")
         def syntax_error(note, start):
             message = (
                 'Invalid format specification: '
@@ -1132,7 +1136,7 @@ class YoutubeDL(object):
         SINGLE = 'SINGLE'
         GROUP = 'GROUP'
         FormatSelector = collections.namedtuple('FormatSelector', ['type', 'selector', 'filters'])
-
+        wf(2,f"{format_spec=}")
         def _parse_filter(tokens):
             filter_parts = []
             for type, string, start, _, _ in tokens:
@@ -1229,12 +1233,16 @@ class YoutubeDL(object):
             return selectors
 
         def _build_selector_function(selector):
+            wf(3,f"{selector=}")
             if isinstance(selector, list):
                 fs = [_build_selector_function(s) for s in selector]
-
+                wf(4,f"{fs=}")
                 def selector_function(ctx):
+                    wf(5,f"{ctx=}")
                     for f in fs:
+                        wf(6,f"{f=}")
                         for format in f(ctx):
+                            wf(7,f"{format=}")
                             yield format
                 return selector_function
             elif selector.type == GROUP:
@@ -1346,21 +1354,23 @@ class YoutubeDL(object):
                     for pair in itertools.product(
                             video_selector(copy.deepcopy(ctx)), audio_selector(copy.deepcopy(ctx))):
                         yield _merge(pair)
-
+            wf(8,f"{selector=}")
             filters = [self._build_format_filter(f) for f in selector.filters]
-
+            wf(9,f"{filters=}")
             def final_selector(ctx):
+                wf(10,f"{ctx=}")
                 ctx_copy = copy.deepcopy(ctx)
                 for _filter in filters:
                     ctx_copy['formats'] = list(filter(_filter, ctx_copy['formats']))
+                wf(11,f"{ctx_copy=}")
                 return selector_function(ctx_copy)
             return final_selector
 
-        stream = io.BytesIO(format_spec.encode('utf-8'))
+        stream = io.BytesIO(format_spec.encode('utf-8')); wf(12,f"{stream=}")
         try:
-            tokens = list(_remove_unused_ops(compat_tokenize_tokenize(stream.readline)))
+            tokens = list(_remove_unused_ops(compat_tokenize_tokenize(stream.readline))); wf(13,f"{tokens=}")
         except tokenize.TokenError:
-            raise syntax_error('Missing closing/opening brackets or parenthesis', (0, len(format_spec)))
+            raise syntax_error('Missing closing/opening brackets or parenthesis', (0, len(format_spec)));
 
         class TokenIterator(object):
             def __init__(self, tokens):
@@ -1382,7 +1392,7 @@ class YoutubeDL(object):
             def restore_last_token(self):
                 self.counter -= 1
 
-        parsed_selector = _parse_format_selection(iter(TokenIterator(tokens)))
+        parsed_selector = _parse_format_selection(iter(TokenIterator(tokens)));wf(14,f"{parsed_selector=}")
         return _build_selector_function(parsed_selector)
 
     def _calc_headers(self, info_dict):
@@ -1630,7 +1640,11 @@ class YoutubeDL(object):
         }
 
         formats_to_download = list(format_selector(ctx))
+        # import ipdb;ipdb.set_trace()
         if not formats_to_download:
+          import stackprinter
+          with open('ydl1635.log','w') as f:
+            f.write(f"{list(format_selector(ctx))}\n{stackprinter.format()}\n{formats}\n")
             raise ExtractorError('requested format not available',
                                  expected=True)
 

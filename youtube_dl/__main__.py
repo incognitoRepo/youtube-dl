@@ -56,7 +56,7 @@ if __name__ == '__main__':
         with open(outvalpth:=filename.parent.joinpath('output.log'),'w') as f:
           f.write(outval)
           print(f"wrote output value to {outvalpth}")
-        with open(htmlpth:=filename.parent.joinpath('output.html','w')) as f:
+        with open(htmlpth:=filename.parent.joinpath('output.html'),'w') as f:
           f.write(html)
           print(f"wrote html output to {htmlpth}")
       evt_dcts = action.read_from_pickle()
