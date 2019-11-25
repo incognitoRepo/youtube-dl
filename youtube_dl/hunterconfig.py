@@ -1,12 +1,16 @@
 #// vscode-fold=1
-"""python imports
+"""
+python imports
 pwd = '/Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/bin'
 # adding the following should make the import work in any pwd
 p = '/Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/bin'
 sys.path.append(p)
 import fmtutil
 """
-import hunter, re, os, types, sys, shelve, dbm, base64
+import hunter, re, os, types, sys, shelve, dbm, base64, yaml
+from ruamel.yaml import YAML
+import simplejson as json
+import jsonpickle
 from ast import literal_eval as leval
 from itertools import count
 from functools import singledispatchmethod, cached_property
@@ -70,6 +74,21 @@ def is_io(obj):
 
 def auto_repr(obj):
   try:
+    if isinstance(obj, addinfourl):
+      def repr_io(v):
+        return v.__class__.__name__ if isinstance(v,io.StringIO) or isinstance(v,io.BytesIO) else v
+      _d = obj.__dict__hc
+      d = {k:repr_io(v) for k,v in _d.items() if not (k.startswith('_'))}
+      return d
+    elif isinstance(obj, OptionParser):
+      try:
+        _ = obj.option_list
+        def nodctrepr(v): return repr(v) if not isinstance(v,dict) else repr(v.keys())
+        obj = [nodctrepr(elm) for elm in _]
+      except:
+        with open('hc91.log','a') as f:
+          f.write("\n".join(arg))
+        raise SystemExit
     class_name = obj.__class__.__name__
     part_1 = f'<{class_name}: '
     items = []
@@ -92,8 +111,8 @@ def auto_repr(obj):
     part_2 = f',{secondary_indent}'.join(items)
     return f'{part_1}{part_2}>'
   except AttributeError:
-    with open('auto_repr.log','a') as f:
-      f.write(f"{obj}")
+    with open('auto_repr_err.log','a') as f:
+      f.write(stackprinter.format(sys.exc_info()))
     raise SystemExit
 
 def is_class(obj):
@@ -140,7 +159,7 @@ def debug_error(obj, err_type, attempted_str="", **funcs):
 
 Supplement = namedtuple(
   'Supplement',
-  'filename_prefix event_kind stack event_symbol event_function event_source h_idx')
+  'filename_prefix event_kind indent_len event_symbol event_function event_source h_idx')
 SupplementalField = namedtuple(
   'SupplementalField',
   'mono poly')
@@ -609,6 +628,8 @@ class CustomPrinter(CallPrinter):
     self.base_path = base_path
     self.pickle_path = base_path.joinpath('pickle')
     self.shelf_path = base_path.joinpath('shelf')
+    self.yaml_path = base_path.joinpath('yaml')
+    self.json_path = base_path.joinpath('json')
     self.debugfilepth = Path('/Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/bin/debug.log')
     self.pklcnt = count()
     self.clrs = Color().fore
@@ -808,34 +829,38 @@ class CustomPrinter(CallPrinter):
   def read_from_pickle(self):
     """Load each item that was previously written to disk."""
     pkld_strhex = Path(self.pickle_path).parent.joinpath('eventpickle_hex')
-    with open('hc804','a') as f:
-      f.write(str(pkld_strhex))
     with open(pkld_strhex, 'r') as file:
       try:
         lines = file.readlines()
         decoded_lines = [bytes.fromhex(elm) for elm in lines]
         unpkld_lines = [pickle.loads(elm) for elm in decoded_lines]
         return unpkld_lines
-      except EOFError:
-        raise
+      except EOFError as err:
+        with open('hc804','a') as f:
+          f.write(stackprinter.format(err))
 
   def write_to_pickle(self,arg,h_idx=0):
-    Pkl = namedtuple('Pkl', 'raw_value pkld_bytes h_idx')
-    if not arg or arg == None: return
-    pkld_bytes = ""
+    Pkl = namedtuple('Pkl', 'arg type h_idx')
+    pre_pkld = ""
     lvl1sep = f"\n{'-'*80}\n"
     lvl2sep = f"\n  {'-'*60}\n  "
 
     def main(arg) -> bool:
       try:
+        if not arg or arg == None:
+          pkld = Pkl(pickle.dumps(arg),pickle.dumps(None),h_idx)
+          return_value = write_to_disk(pkld,debug=True)
+          return return_value
         og_arg = arg
-        cleaned_arg = make_event_arg_pickleable(arg)
-        pkld = get_pickled_bytes(cleaned_arg,h_idx)
+        # cleaned_arg = make_event_arg_pickleable(arg)
+        pkld = get_pickled_bytes(arg,h_idx)
         return_value = write_to_disk(pkld,og_arg,debug=True)
         return return_value
       except:
         with open('hc843.log','a') as f:
-          f.write(stackprinter.format(sys.exc_info()))
+          f.write(stackprinter.format())
+          f.write(f"\n{arg}")
+        raise SystemExit
 
     def make_event_arg_pickleable(arg,keep=False):
       if isinstance(arg,tuple) and isinstance(arg[1],BaseException):
@@ -847,11 +872,14 @@ class CustomPrinter(CallPrinter):
       elif isinstance(arg,addinfourl):
         arg = auto_repr(arg)
       elif isinstance(arg,OptionParser):
-        _ = arg.option_list
-        lambda nodctrepr = v: repr(v) if not isinstance(v,dict) else repr(v.keys())
-        arg = {k:nodctrepr(v) for k,v in _.items()}
-        with open('hc860.log','a') as f:
-          f.write("\n".join(arg))
+        try:
+          _ = arg.option_list
+          def nodctrepr(v): return repr(v) if not isinstance(v,dict) else repr(v.keys())
+          arg = [nodctrepr(elm) for elm in _]
+        except:
+          with open('hc860.log','a') as f:
+            f.write("\n".join(arg))
+          raise SystemExit
       else:
         arg = arg
       return arg
@@ -859,83 +887,100 @@ class CustomPrinter(CallPrinter):
     def get_pickled_bytes(cleaned_arg,h_idx):
       arg = cleaned_arg
       try:
-        pkld_bytes = Pkl(arg, pickle.dumps(arg), h_idx)
-        return pkld_bytes
+        pre_pkld = Pkl(pickle.dumps(arg), type(arg), h_idx)
+        return pre_pkld
       except pickle.PickleError as err:
+        if isinstance(arg,tuple) and isinstance(arg[1],BaseException):
+          assert arg[2] is None or isinstance(arg[2],TracebackType), f"{info(arg)}"
+          try:
+            arg = traceback.format_exception_only(arg[0],arg[1])
+          except:
+            return arg
+        elif isinstance(arg,addinfourl):
+          arg = auto_repr(arg)
+        elif isinstance(arg,OptionParser):
+          try:
+            _ = arg.option_list
+            def nodctrepr(v): return repr(v) if not isinstance(v,dict) else repr(v.keys())
+            arg = [nodctrepr(elm) for elm in _]
+          except:
+            with open('hc902_err.log','a') as f:
+              f.write("\n".join(arg))
+            raise SystemExit
         if is_class(arg) or is_instance(arg):
           try:
             arg = auto_repr(arg)
-            pkld_bytes = Pkl(arg, pickle.dumps(arg), h_idx)
-            return pkld_bytes
+            pre_pkld = Pkl(pickle.dumps(arg), type(arg), h_idx)
+            return pre_pkld
           except:
-            print("PickleError Unresolved")
-            print(arg)
-            print(auto_repr(arg))
+            with open('hc879.log','a') as f:
+              f.write(stackprinter.format(sys.exc_info()))
             raise SystemExit
         elif isinstance(arg,list):
           _ = [self.write_to_pickle(elm) for elm in arg]
-          pkld_bytes = Pkl(_, pickle.dumps(_), h_idx)
-          return pkld_bytes
+          pre_pkld = Pkl(pickle.dumps(_), type(_), h_idx)
+          return pre_pkld
         elif has_dct(arg):
           _ = has_dct(arg)
-          pkld_bytes = Pkl(_, pickle.dumps(_), h_idx)
-          return pkld_bytes
+          pre_pkld = Pkl(pickle.dumps(_), type(_), h_idx)
+          return pre_pkld
         else:
-          print("PickleError Unresolved 2")
-          print(repr(arg))
+          with open('hc906_err.log','a') as f:
+            f.write(stackprinter.format())
+            f.write(repr(arg))
           raise SystemExit
       except AttributeError as err:
         if isinstance(arg,tuple):
           try:
             _ = [self.write_to_pickle(elm) for elm in arg]
-            pkld_bytes = Pkl(pkld_bytes, pickle.dumps(_), h_idx)
-            return pkld_bytes
+            pre_pkld = Pkl(pickle.dumps(_), type(_), h_idx)
+            return pre_pkld
           except:
-            print(self.write_to_pickle(arg))
-            print("a.811")
+            with open('hc899','a') as f:
+              f.write(stackprinter.format())
+              f.write(repr(arg))
             raise SystemExit
         elif is_class(arg):
           arg = auto_repr(arg)
-          pkld_bytes = Pkl(arg, pickle.dumps(arg), h_idx)
-          return pkld_bytes
+          pre_pkld = Pkl(pickle.dumps(arg), type(arg), h_idx)
+          return pre_pkld
         elif is_instance(arg):
           arg = auto_repr(arg)
-          pkld_bytes = Pkl(arg, pickle.dumps(arg), h_idx)
-          return pkld_bytes
+          pre_pkld = Pkl(pickle.dumps(arg), type(arg), h_idx)
+          return pre_pkld
         elif isinstance(arg,dict):
           try:
             lst = []
             for k,v in arg.items():
-              lst.append(f"{k}: {repr(v)}")
+              lst.append(f"{k}: {get_pickled_bytes(v)}")
             _ = "\n".join(lst)
-            pkld_bytes = Pkl(_, pickle.dumps(_), h_idx)
-            return pkld_bytes
+            pre_pkld = Pkl(pickle.dumps(_), type(_), h_idx)
+            return pre_pkld
           except:
             print("AttributeError Unresolved 2")
         elif inspect.isfunction(arg):
           try:
             _ = is_function(arg)
-            pkld_bytes = Pkl(_, pickle.dumps(_), h_idx)
-            return pkld_bytes
+            pre_pkld = Pkl(pickle.dumps(_), type(_), h_idx)
+            return pre_pkld
           except:
             print("AttributeError Unresolved 4")
             raise SystemExit
         elif isinstance(arg,list):
           _ = [self.write_to_pickle(elm) for elm in arg]
-          pkld_bytes = Pkl(_, pickle.dumps(_), h_idx)
-          return pkld_bytes
+          pre_pkld = Pkl(pickle.dumps(_), type(_), h_idx)
+          return pre_pkld
         else:
-          print(lvl2sep,"AttributeError Unresolved 3")
-          print(str(arg))
-          print(str(arg).startswith("<class"))
-          print(is_class(arg))
+          with open('hc952_err.log','a') as f:
+            f.write(stackprinter.format())
+            f.write(repr(arg))
           raise SystemExit
       except TypeError as err:
         if isinstance(arg,tuple):
           if is_class(arg[0]):
             _ = auto_repr(arg[0])
-            pkld_bytes = Pkl(_, pickle.dumps(_), h_idx)
-            return pkld_bytes
+            pre_pkld = Pkl(pickle.dumps(_), type(_), h_idx)
+            return pre_pkld
           else:
             debug_error(arg,auto_repr(arg[0]),"TypeError")
             print("TypeError Unresolved 1")
@@ -944,10 +989,10 @@ class CustomPrinter(CallPrinter):
           try:
             lst = []
             for k,v in arg.items():
-              lst.append(f"{k}: {repr(v)}")
+              lst.append(f"{k}: {get_pickled_bytes(v)}")
             _ = "\n".join(lst)
-            pkld_bytes = Pkl(_, pickle.dumps(_), h_idx)
-            return pkld_bytes
+            pre_pkld = Pkl(pickle.dumps(_), type(_), h_idx)
+            return pre_pkld
           except:
             print("TypeError Unresolved 2")
             raise SystemExit
@@ -959,34 +1004,35 @@ class CustomPrinter(CallPrinter):
             for k,v in d.items():
               lst.append(f"{k}: {repr(v)}")
             _ = "\n".join(lst)
-            pkld_bytes = Pkl(_, pickle.dumps(_), h_idx)
-            return pkld_bytes
+            pre_pkld = Pkl(pickle.dumps(_), type(_), h_idx)
+            return pre_pkld
           except:
             print("TypeError Unresolved 3")
             raise SystemExit
         elif isinstance(arg,GeneratorType):
           try:
             _ = repr(list(arg))
-            pkld_bytes = Pkl(_, pickle.dumps(_), h_idx)
-            return pkld_bytes
+            pre_pkld = Pkl(pickle.dumps(_), type(_), h_idx)
+            return pre_pkld
           except:
             print("TypeError Unresolved 4")
             raise SystemExit
         else:
-          print(info(arg))
-          debug_error(arg,"TypeError")
-          print(lvl2sep,"TypeError Unresolved 5")
+          with open('hc999_err.log','a') as f:
+            f.write(stackprinter.format())
+            f.write(repr(arg))
           raise SystemExit
       except:
-        print("Unknown Exception Unresolved")
-        print()
+        with open('hc1004_err.log','a') as f:
+          f.write(stackprinter.format())
+          f.write(repr(arg))
         raise SystemExit
 
     def write_to_disk(pkld,og_arg=None,debug=False):
-      pkld_obj, pkld_bytes, h_idx = pkld
-      og_arg = f"{h_idx}:\n{repr(og_arg)}\n"
-      pkld_obj = f"{h_idx}:\n{repr(pkld_obj)}\n"
-      pkld_hex = f"{h_idx}:\n{pkld_bytes.hex()}\n"
+      pre_pkld, pkld_type, h_idx = pkld
+      og_arg = f"{repr(og_arg)}\n"
+      pkld_obj = f"{repr(pre_pkld)}\n"
+      pkld_hex = f"{pickle.dumps(tuple((h_idx,pkld_type,pre_pkld))).hex()}\n"
       if debug:
         pkld_strori = Path(self.pickle_path).parent.joinpath('eventpickle_ori')
         with open(pkld_strori,'a') as f:
@@ -1000,6 +1046,48 @@ class CustomPrinter(CallPrinter):
       return pkld_strhex
 
     main(arg)
+
+  def read_yaml(self):
+    yaml = YAML(typ='unsafe')
+    yaml_path = Path(self.yaml_path).parent.joinpath('eventyaml')
+    with open(yaml_path) as f:
+      yaml.load(f)
+
+  def write_yaml(self,arg):
+    try:
+      if isinstance(arg,tuple) and isinstance(arg[1],BaseException):
+        assert arg[2] is None or isinstance(arg[2],TracebackType), f"{info(arg)}"
+        arg = traceback.format_exception_only(arg[0],arg[1])
+      else:
+        yaml = YAML(typ='unsafe')
+        yaml.default_flow_style = False
+        yaml_path = Path(self.yaml_path).parent.joinpath('eventyaml')
+        with open(yaml_path,'a') as f:
+          yaml.dump(arg,f)
+    except:
+      arg = repr(arg)
+      with open('hc1060_errr.log','a') as f:
+        f.write(stackprinter.format(sys.exc_info()))
+        f.write(f"{arg=}")
+
+  def read_json(self):
+    jsn_path = Path(self.json_path).parent.joinpath('eventjson')
+    with open(jsn_path,'a') as f:
+      lines = f.read()
+    jsn_lines = [jsonpickle.decode(line) for line in lines]
+    return jsn_lines
+
+  def write_json(self,arg):
+    try:
+      jsn = jsonpickle.encode(arg)
+      jsn_path = Path(self.json_path).parent.joinpath('eventjson')
+      with open(jsn_path,'a') as f:
+        f.write(jsn+'\n')
+    except:
+      arg = repr(arg)
+      with open('hc1077_err.log','a') as f:
+        f.write(stackprinter.format(sys.exc_info()))
+        f.write(f"{arg=}")
 
   def read_from_supplemental(self):
     pkld_strhex = Path(self.pickle_path).parent.joinpath('eventpickle_supp_hex')
@@ -1040,9 +1128,10 @@ class CustomPrinter(CallPrinter):
         event_kind = SupplementalField(
           f"{evt_knd:9} ",
           f"{self.clrs(evt_knd,'KIND'):9} "),
-        stack = SupplementalField(
-          f"{'   ' * (len(stack) - 1)}",
-          f"{'   ' * (len(stack) - 1)}"),
+        indent_len = SupplementalField(
+          f"{len('   ' * (len(stack) - 1))}",
+          f"{len('   ' * (len(stack) - 1))}"
+        ),
         event_symbol = SupplementalField(
           symbdct[evt_knd],
           f"{self.clrs(symbdct[evt_knd],evt_knd.upper())} "),
@@ -1057,8 +1146,8 @@ class CustomPrinter(CallPrinter):
       return supp
 
     def get_pickled(supp_obj):
-      pkld_bytes = pickle.dumps(supp_obj)
-      return pkld_bytes
+      pre_pkld = pickle.dumps(supp_obj)
+      return pre_pkld
 
     def write_pickled(pkld):
       pkld_pth = Path(self.pickle_path).parent.joinpath('eventpickle_supp_obj')
@@ -1075,7 +1164,8 @@ class CustomPrinter(CallPrinter):
   def __call__(self, event):
     count = next(self.count)
     # fmtd_arg = self.process_event_arg(event.arg)
-    self.write_to_pickle(event.arg,h_idx=count)
+    # self.write_to_pickle(event.arg,h_idx=count)
+    self.write_json(event.arg)
 
     ident = event.module, event.function
 
@@ -1285,7 +1375,6 @@ class QueryConfig:
   def eventpickle(self):
     base_path = self.basedir.joinpath('eventpickle').absolute()
     base_path.mkdir(parents=True,exist_ok=True)
-    # pklpth = base.joinpath('evtdcts.pkl')
     actions = [
       CustomPrinter(
         # stream=io.StringIO(),
@@ -1295,13 +1384,12 @@ class QueryConfig:
         filename_alignment=10,
         # force_colors=False,
         base_path=base_path,
-        ), # repr_limit=1024
+      ),
       # CallPrinter(),
     ]
     outputs = [action.stream for action in actions]
     filenames = [base_path.joinpath(filename).absolute() for filename in ['call.eventpickle.log']]
     write_func = partial(self.write_func,outputs,filenames)
-    # evtdcts_pklpth = base.joinpath('evtdcts_pklpth.pkl')
     query = And(
       Q(filename_endswith=[".py"],
             filename_contains="youtube_dl",

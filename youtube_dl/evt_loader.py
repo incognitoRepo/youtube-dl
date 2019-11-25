@@ -6,12 +6,14 @@ from urllib.parse import urlparse, ParseResult
 from validator_collection import validators, checkers
 from hunter import CallPrinter
 from ipdb import set_trace as st
-import sys, shelve, re
+import sys, shelve, re, codecs
 from typing import Iterable
-import stackprinter, prettyprinter
+import stackprinter
+from prettyprinter import pformat
 from bs4 import BeautifulSoup
 from pathlib import Path
-from pprint import pformat
+from textwrap import TextWrapper
+
 stackprinter.set_excepthook(
   style='lightbg2',#'darkbg3',
   source_lines=5,
@@ -241,9 +243,6 @@ def process_vs(vs,depth=0,c=False):
     vs = [vs]
   for v in vs:
     sv = repr(v)
-    # if sv.startswith("<"):
-    #   with open('el205','a') as f:
-    #     f.write(sv)
     if not v:
       ns = "None" if not c else clr("None","none")
       new_vs.append(ns)
@@ -382,66 +381,104 @@ def open_shelf():
         print(f"{k}: {v}")
   p(pds)
 
-
 if __name__ == "__main__":
   pklpth = Path("/Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/eventpickle/eventpickle_hex")
-  suppth = Path("")
-  with open(pklpth,'r') as f:
-    lines = f.readlines()
-  print(len(lines))
-  lines_idxd = [(i,elm) for i,elm in zip(range(len(lines)), lines)]
-  decoded_lines = [bytes.fromhex(elm).strip() for elm in lines]
-  dlines_idxd = [(i,elm) for i,elm in zip(range(len(decoded_lines)), decoded_lines)]
+  suppth = Path("/Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/eventpickle/eventpickle_supp_hex")
+  serialized_files = []
+  for fp in (pklpth,suppth):
+    with open(fp,'r') as f:
+      serialized_files.append(f.readlines())
+  argvars, evtinfos = serialized_files
+  avs_fromhex = [bytes.fromhex(elm) for elm in argvars]
+  eis_fromhex = [bytes.fromhex(elm) for elm in evtinfos]
 
   def load_pkld_line(ln):
-    ldd = pickle.loads(ln)
-    if isinstance(ldd,list):
-      ldd = ["" if elm is None else elm for elm in ldd]
-    return ldd
-  unpkld_lines = [load_pkld_line(elm) for elm in decoded_lines]
-
-  def safe_join(i,line):
-    if not isinstance(line,list):
-      return line
     try:
-      jdl = "\n".join(line)
-      return jdl
-    except TypeError:
-      _ = [f"{elm.__module__}.{elm.__name__}" for elm in line]
-      jdl = "\n".join(_)
-      return jdl
+      ldd = pickle.loads(ln)
+      if isinstance(ldd,list):
+        ldd = ["" if elm is None else elm for elm in ldd]
+      return ldd
     except:
-      print(i+'\n'+stackprinter.format(sys.exc_info()))
-      raise SystemExit
-      # if isinstance(ldd,list) and len(ldd)==1 and isinstance(ldd[0],str):
-      #   ldd = ldd[0]
-      # elif isinstance(ldd,list) and all([isinstance(elm,str) for elm in ldd]):
-      #   ldd = "\n".join([str(elm)])
-      # return ldd
-  unpkld_jd = [safe_join(i,elm) for i,elm in enumerate(unpkld_lines)]
+      return "error"
 
-
-  with open("unpkld_lines","w") as f:
-    f.write("\n".join(unpkld_lines))
-  line_types = [type(elm) for elm in unpkld_lines]
-  st()
-  d = {
-    # "og_lines_hex": lines,
-    # "bytes_from_hex": decoded_lines,
-    "line_types": line_types,
-    "unpkld_lines": unpkld_lines,
-  }
-  df = pd.DataFrame(d)
-  df['idx1'] = df.index
-  df2 = df[df.line_types == list]
-  llst,lli = list(df2.unpkld_lines),list(df2.idx1)
-
-  for i,elm in enumerate(decoded_lines):
-    print(elm)
+  def load_type_or_none(t):
     try:
-      print(pickle.loads(elm))
-    except: # i = 14574
-      st()
+      return pickle.loads(t)
+    except:
+      return t
+
+  avs_unpkld = []
+  for elm in avs_fromhex:
+    tup = unpkld_tup = pickle.loads(elm)
+    avs_unpkld.append({'arg_h_idx':tup[0],'arg_type':load_type_or_none(tup[1]),'arg_obj':load_pkld_line(tup[2])})
+
+  eis_unpkld = [pickle.loads(elm)._asdict() for elm in eis_fromhex]
+  eis_unpkld = []
+  for elm in eis_fromhex:
+    supp_field_tup = pickle.loads(elm)
+    supp_field_dct = supp_field_tup._asdict()
+    d = {}
+    for k,v in supp_field_dct.items():
+      if v.mono == v.poly:
+        d.update({f"{k}":f"{v.mono}"})
+      else:
+        d.update({f"{k}_mono":f"{v.mono}"})
+        d.update({f"{k}_poly":f"{v.poly}"})
+    eis_unpkld.append(d)
+
+  merged = [dict(**d1,**d2) for d1,d2 in zip(avs_unpkld,eis_unpkld)]
+  df = pd.DataFrame(merged)
+  df['df_idx'] = df.index
+
+  df2 = df[[
+    "df_idx","arg_h_idx","h_idx","arg_obj","arg_type",
+    "filename_prefix_mono","filename_prefix_poly",
+    "event_kind_mono","event_kind_poly",
+    "indent_len",
+    "event_symbol_mono","event_symbol_poly",
+    "event_function","event_source"
+  ]]
+
+  with open("df.txt","w") as dfout:
+    write_cols = [
+      "df_idx","arg_h_idx","h_idx","arg_obj","arg_type",
+      "filename_prefix_mono",
+      "event_kind_mono",
+      "indent_len",
+      "event_symbol_mono",
+      "event_function",
+      "event_source"
+    ]
+    df2.to_string(dfout,columns=write_cols)
+
+  df3 = df2[~df2.arg_obj.isnull()].copy()
+  df3.reset_index(drop=True,inplace=True)
+  df3['df_idx'] = df3.index
+  join_to_write_list,test = [],[]
+  for tup in df3.itertuples():
+    arg_obj = tup.arg_obj
+    arg_type = tup.arg_type
+    idt_len = tup.indent_len
+    evt_fnc = tup.event_function
+    fmtd = pformat(arg_obj)
+    fmtdec = codecs.decode(fmtd,'unicode_escape')
+    # l:list = tw.wrap(text)
+    # s:str = tw.fill(text)
+    test.append(fmtdec)
+    join_to_write_list.append((
+      f"evt_fnc: {evt_fnc}\n"
+      f"arg_type: {arg_type}, idt_len: {idt_len}\n"
+      f"arg_obj:\n{arg_obj}\n"
+      f"{'----'*20}\n"
+      f"{evt_fnc}" + "(" + fmtd + ")\n"
+      f"{'----'*20}\n"
+      f"{'*~*~'*20}\n"
+    ))
+  with open('arg_objs.txt','w') as f:
+    f.write("".join(join_to_write_list))
+  with open('test','w') as f:
+    f.write("".join(test))
+
 """
  style: string
         'plaintext' (default): Output just text
@@ -474,6 +511,3 @@ if __name__ == "__main__":
         Example: To hide numpy internals from the traceback, set
         `suppressed_paths=[r"lib/python.*/site-packages/numpy"]`
 """
-
-
-
