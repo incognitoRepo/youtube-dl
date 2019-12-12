@@ -14,22 +14,34 @@ if __package__ is None and not hasattr(sys, 'frozen'):
   sys.path.insert(0, os.path.dirname(os.path.dirname(path)))
 
 import youtube_dl
-import hunter
+import hunter, inspect
 from youtube_dl.hunterconfig import QueryConfig
-from prettyprinter import cpprint
+from prettyprinter import cpprint, pformat
 from hunter.tracer import Tracer
 from pathlib import Path
-from pdb import set_trace as st
+from ipdb import set_trace as st
 import os, io, stackprinter
 import pickle, sys
 from optparse import OptionParser
 from types import GeneratorType
 from ansi2html import Ansi2HTMLConverter
 from contextlib import contextmanager
+from toolz.curried import compose_left
+from hdlogger.tracers import hdTracer
+from hdlogger.processors import TraceProcessor
 
 test = True
 output = True
 dcts = []
+
+def wf(filename,obj,mode="a"):
+  path = Path(filename)
+  if not path.parent.exists():
+    path.mkdir(parents=True, exist_ok=True)
+  if not isinstance(obj, str): obj = str(obj)
+  if mode == "a" and not obj.endswith("\n"): obj = f"{obj}\n"
+  with path.open(mode,encoding="utf-8") as f:
+    f.write(obj)
 
 @contextmanager
 def captured_output():
@@ -38,70 +50,51 @@ def captured_output():
   try:
     sys.stdout, sys.stderr = new_out, new_err
     yield sys.stdout, sys.stderr
+  except SystemExit as err:
+    print('-- expected SystemExit: \x1b[1;32mSuccess\x1b[0m')
+  except:
+    sys.stdout, sys.stderr = old_out, old_err
+    s = stackprinter.format(sys.exc_info()); print(s)
+    # import IPython; IPython.embed()
+    import ipdb; ipdb.post_mortem(sys.exc_info()[2])
+    raise
+  else:
+    sys.stdout, sys.stderr = old_out, old_err
   finally:
     sys.stdout, sys.stderr = old_out, old_err
 
-if __name__ == '__main__':
+def setup():
   import sys
   import os
   sys.path.insert(0, '/Users/alberthan/VSCodeProjects/HDLogger')
-  from hdlogger.tracers import hdTracer
-  return_value = ""
   hd_tracer = hdTracer()
-  with captured_output() as (out,err):
-    try:
-      return_value = hd_tracer.run(youtube_dl.main)
-    except:
-      s = stackprinter.format(sys.exc_info())
-      with open('hdlog.err.log','w') as f:
-        f.write(s)
-  output = out.getvalue().splitlines()
-  with open('hdlog.log','w') as f:
-    f.write(
-      "HDLOGGER\n========n"
-      + "return_value: " + repr(return_value)
-      + "trace\n-----" + "\n".join(output)
-    )
 
+  try:
+    with captured_output() as (io_out,io_err):
+      sys.settrace(hd_tracer.trace_dispatch)
+      youtube_dl.main()
+  except SystemExit as err:
+    print('-- expected SystemExit: \x1b[1;32mSuccess\x1b[0m')
+    raise err
+  except:
+    wf('logs/error.except.main.log', stackprinter.format(sys.exc_info()), 'a')
+    raise
+  finally:
+    output,error = io_out.getvalue(),io_err.getvalue()
+    print(output)
+    wf('logs/io_out.finally.log', output, 'a')
+    wf('logs/io_err.finally.log', error, 'a')
+  return (inspect.currentframe(), globals(), locals())
 
-# if __name__ == '__main__':
-#   print(f"\x1b[0;36m{youtube_dl}\x1b[0m")
-#   qc = QueryConfig()
-#   qcfg = qc.eventpickle()
-#   tracer = Tracer()
-#   query,actions,outputs,filenames,write_func,epdf_pklpth = qcfg
-#   filename = filenames[0]
-#   action = actions[0]
-#   if output:
-#     output = io.StringIO()
-#     action._stream = output
-#   tracer.trace(query)
-#   try:
-#     youtube_dl.main()
-#   except SystemExit:
-#     tb1 = stackprinter.format(sys.exc_info())
-#     try:
-#       tracer.stop()
-#       if output:
-#         outval = output.getvalue()
-#         conv = Ansi2HTMLConverter()
-#         html = conv.convert(outval)
-#         output.close()
-#         with open(outvalpth:=filename.parent.joinpath('output.log'),'w') as f:
-#           f.write(outval)
-#           print(f"wrote output value to {outvalpth}")
-#         with open(htmlpth:=filename.parent.joinpath('output.html'),'w') as f:
-#           f.write(html)
-#           print(f"wrote html output to {htmlpth}")
-#       # evt_dcts = action.read_json()
-#       # dcts.append(evt_dcts)
-#     except BaseException as exc:
-#       tb2 = stackprinter.format(exc)
-#       with open('tb_inner.log','w') as f:
-#         f.write(tb1)
-#         f.write(tb2)
-#       print("failed_inner")
-#   except:
-#     with open('tb_outer.log','w') as f:
-#       f.write(stackprinter.format(sys.exc_info()))
-#     print("failed_outer")
+def go_interactive(pas):
+  frame, glols, lols = pas
+  filepath = '/Users/alberthan/VSCodeProjects/HDLogger/youtube-dl/logs/03.pickled_states_hex.tracer.log'
+  tp = TraceProcessor(filepath)
+  df = tp.dataframe
+  import IPython; IPython.embed()
+
+if __name__ == '__main__':
+  compose_left(
+    setup,
+    go_interactive
+  )()

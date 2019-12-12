@@ -46,7 +46,7 @@ from optparse import OptionParser
 import copyreg
 
 def pickle_traceback(tb):
-  return traceback.format_tb(tb)
+  return "\n".join(traceback.format_tb(tb))
 
 copyreg.pickle(TracebackType,pickle_traceback)
 DEBUG = "dbg_cfg_ret.log"
@@ -1032,7 +1032,7 @@ class CustomPrinter(CallPrinter):
       pre_pkld, pkld_type, h_idx = pkld
       og_arg = f"{repr(og_arg)}\n"
       pkld_obj = f"{repr(pre_pkld)}\n"
-      pkld_hex = f"{pickle.dumps(tuple((h_idx,pkld_type,pre_pkld))).hex()}\n"
+      pkld_hex = f"{pickle.dumps(tuple( (h_idx,pkld_type,pre_pkld) )).hex()}\n"
       if debug:
         pkld_strori = Path(self.pickle_path).parent.joinpath('eventpickle_ori')
         with open(pkld_strori,'a') as f:
