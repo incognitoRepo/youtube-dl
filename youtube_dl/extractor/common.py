@@ -81,6 +81,7 @@ from ..utils import (
     xpath_with_ns,
 )
 
+from hdlogger.utils import *
 
 class InfoExtractor(object):
     """Information Extractor class.
@@ -1011,7 +1012,9 @@ class InfoExtractor(object):
         """
         Like _search_regex, but strips HTML tags and unescapes entities.
         """
+        # wf(f"{pattern=}\n{string=}\n{name=}\n{default=}\n{fatal=}\n{flags=}\n{group=}\n",'logs/_html_search_regex.log','a')
         res = self._search_regex(pattern, string, name, default, fatal, flags, group)
+        # wf(f"{res=}\n\n",'logs/_html_search_regex.log','a')
         if res:
             return clean_html(res).strip()
         else:

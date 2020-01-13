@@ -1,0 +1,64 @@
+unable to pickle {'title': 'youtube-dl', 'platform': <module 'platform' from '/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/platform.py'>, 'ctypes': <module 'ctypes' from '/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/ctypes/__init__.py'>, 'libc': <CDLL '/usr/lib/libc.dylib', handle 10af3c7e0 at 0x1117eeca0>} due to:
+k='title'
+v='youtube-dl'isinstance(v,GeneratorType)=False
+youtube-dlunable to pickle {'title': 'youtube-dl', 'platform': <module 'platform' from '/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/platform.py'>, 'ctypes': <module 'ctypes' from '/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/ctypes/__init__.py'>, 'libc': <CDLL '/usr/lib/libc.dylib', handle 10adca7e0 at 0x1095c4220>} due to:
+k='title'
+v='youtube-dl'isinstance(v,GeneratorType)=False
+youtube-dlunable to pickle {'title': 'youtube-dl', 'platform': <module 'platform' from '/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/platform.py'>, 'ctypes': <module 'ctypes' from '/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/ctypes/__init__.py'>, 'libc': <CDLL '/usr/lib/libc.dylib', handle 10f9987e0 at 0x116de1160>} due to:
+k='title'
+v='youtube-dl'isinstance(v,GeneratorType)=False
+youtube-dlunable to pickle {'title': 'youtube-dl', 'platform': <module 'platform' from '/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/platform.py'>, 'ctypes': <module 'ctypes' from '/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/ctypes/__init__.py'>, 'libc': <CDLL '/usr/lib/libc.dylib', handle 1035897e0 at 0x10a59fdc0>} due to:
+k='title'
+v='youtube-dl'isinstance(v,GeneratorType)=False
+youtube-dlunable to pickle {'title': 'youtube-dl', 'platform': <module 'platform' from '/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/platform.py'>, 'ctypes': <module 'ctypes' from '/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/ctypes/__init__.py'>, 'libc': <CDLL '/usr/lib/libc.dylib', handle 117c227e0 at 0x116777190>} due to:
+k='title'
+v='youtube-dl'isinstance(v,GeneratorType)=False
+youtube-dlunable to pickle {'title': 'youtube-dl', 'platform': <module 'platform' from '/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/platform.py'>, 'ctypes': <module 'ctypes' from '/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/ctypes/__init__.py'>, 'libc': <CDLL '/usr/lib/libc.dylib', handle 10c17f7e0 at 0x111e6bf10>} due to:
+k='title'
+v='youtube-dl'isinstance(v,GeneratorType)=False
+youtube-dlunable to pickle {'title': 'youtube-dl', 'platform': <module 'platform' from '/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/platform.py'>, 'ctypes': <module 'ctypes' from '/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/ctypes/__init__.py'>, 'libc': <CDLL '/usr/lib/libc.dylib', handle 1162b47e0 at 0x115c44cd0>} due to:
+k='title'
+v='youtube-dl'isinstance(v,GeneratorType)=False
+youtube-dlunable to pickle {'title': 'youtube-dl', 'platform': <module 'platform' from '/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/platform.py'>, 'ctypes': <module 'ctypes' from '/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/ctypes/__init__.py'>, 'libc': <CDLL '/usr/lib/libc.dylib', handle 10e9e77e0 at 0x11250fcd0>} due to:
+k='title'
+v='youtube-dl'isinstance(v,GeneratorType)=False
+youtube-dlunable to pickle {'title': 'youtube-dl', 'platform': <module 'platform' from '/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/platform.py'>, 'ctypes': <module 'ctypes' from '/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/ctypes/__init__.py'>, 'libc': <CDLL '/usr/lib/libc.dylib', handle 10ed717e0 at 0x1146b55b0>} due to:
+k='title'
+v='youtube-dl'isinstance(v,GeneratorType)=False
+youtube-dlunable to pickle {'title': 'youtube-dl', 'platform': <module 'platform' from '/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/platform.py'>, 'ctypes': <module 'ctypes' from '/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/ctypes/__init__.py'>, 'libc': <CDLL '/usr/lib/libc.dylib', handle 11095e7e0 at 0x1079df5b0>} due to:
+k='title'
+v='youtube-dl'isinstance(v,GeneratorType)=False
+youtube-dlunable to pickle {'title': 'youtube-dl', 'platform': <module 'platform' from '/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/platform.py'>, 'ctypes': <module 'ctypes' from '/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/ctypes/__init__.py'>, 'libc': <CDLL '/usr/lib/libc.dylib', handle 110df37e0 at 0x115d765b0>} due to:
+k='title'
+v='youtube-dl'isinstance(v,GeneratorType)=False
+youtube-dlunable to pickle {'title': 'youtube-dl', 'platform': <module 'platform' from '/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/platform.py'>, 'ctypes': <module 'ctypes' from '/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/ctypes/__init__.py'>, 'libc': <CDLL '/usr/lib/libc.dylib', handle 10d5ae7e0 at 0x10c6ad5b0>} due to:
+k='title'
+v='youtube-dl'isinstance(v,GeneratorType)=False
+youtube-dlunable to pickle {'title': 'youtube-dl', 'platform': <module 'platform' from '/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/platform.py'>, 'ctypes': <module 'ctypes' from '/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/ctypes/__init__.py'>, 'libc': <CDLL '/usr/lib/libc.dylib', handle 10f9307e0 at 0x10ee08220>} due to:
+k='title'
+v='youtube-dl'isinstance(v,GeneratorType)=False
+youtube-dlunable to pickle {'title': 'youtube-dl', 'platform': <module 'platform' from '/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/platform.py'>, 'ctypes': <module 'ctypes' from '/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/ctypes/__init__.py'>, 'libc': <CDLL '/usr/lib/libc.dylib', handle 1169677e0 at 0x1131fd340>} due to:
+k='title'
+v='youtube-dl'isinstance(v,GeneratorType)=False
+youtube-dlunable to pickle {'title': 'youtube-dl', 'platform': <module 'platform' from '/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/platform.py'>, 'ctypes': <module 'ctypes' from '/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/ctypes/__init__.py'>, 'libc': <CDLL '/usr/lib/libc.dylib', handle 10abbc7e0 at 0x10d520340>} due to:
+k='title'
+v='youtube-dl'isinstance(v,GeneratorType)=False
+youtube-dlunable to pickle {'title': 'youtube-dl', 'platform': <module 'platform' from '/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/platform.py'>, 'ctypes': <module 'ctypes' from '/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/ctypes/__init__.py'>, 'libc': <CDLL '/usr/lib/libc.dylib', handle 10e5a37e0 at 0x10fcd6340>} due to:
+k='title'
+v='youtube-dl'isinstance(v,GeneratorType)=False
+youtube-dlunable to pickle {'title': 'youtube-dl', 'platform': <module 'platform' from '/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/platform.py'>, 'ctypes': <module 'ctypes' from '/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/ctypes/__init__.py'>, 'libc': <CDLL '/usr/lib/libc.dylib', handle 1198077e0 at 0x1157c4340>, 'title_bytes': b'youtube-dl', 'buf': <ctypes.c_char_Array_10 object at 0x115975e40>} due to:
+k='title'
+v='youtube-dl'isinstance(v,GeneratorType)=False
+youtube-dlunable to pickle {'title': 'youtube-dl', 'platform': <module 'platform' from '/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/platform.py'>, 'ctypes': <module 'ctypes' from '/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/ctypes/__init__.py'>, 'libc': <CDLL '/usr/lib/libc.dylib', handle 11875d7e0 at 0x11472c340>, 'title_bytes': b'youtube-dl', 'buf': <ctypes.c_char_Array_10 object at 0x1148dde40>} due to:
+k='title'
+v='youtube-dl'isinstance(v,GeneratorType)=False
+youtube-dlunable to pickle {'title': 'youtube-dl', 'platform': <module 'platform' from '/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/platform.py'>, 'ctypes': <module 'ctypes' from '/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/ctypes/__init__.py'>, 'libc': <CDLL '/usr/lib/libc.dylib', handle 1107d97e0 at 0x111bc2340>, 'title_bytes': b'youtube-dl', 'buf': <ctypes.c_char_Array_10 object at 0x111d7ee40>} due to:
+k='title'
+v='youtube-dl'isinstance(v,GeneratorType)=False
+youtube-dlunable to pickle {'title': 'youtube-dl', 'platform': <module 'platform' from '/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/platform.py'>, 'ctypes': <module 'ctypes' from '/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/ctypes/__init__.py'>, 'libc': <CDLL '/usr/lib/libc.dylib', handle 109d797e0 at 0x106c05340>, 'title_bytes': b'youtube-dl', 'buf': <ctypes.c_char_Array_10 object at 0x106db7dc0>} due to:
+k='title'
+v='youtube-dl'isinstance(v,GeneratorType)=False
+youtube-dlunable to pickle {'title': 'youtube-dl', 'platform': <module 'platform' from '/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/platform.py'>, 'ctypes': <module 'ctypes' from '/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/ctypes/__init__.py'>, 'libc': <CDLL '/usr/lib/libc.dylib', handle 10ef087e0 at 0x110530340>, 'title_bytes': b'youtube-dl', 'buf': <ctypes.c_char_Array_10 object at 0x1106e7dc0>} due to:
+k='title'
+v='youtube-dl'isinstance(v,GeneratorType)=False
+youtube-dl

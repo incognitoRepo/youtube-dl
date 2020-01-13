@@ -1,0 +1,8 @@
+take the exception framestack.
+search each f_globals[var_of_interest].
+keep a cache (e.g., cache = {}). keep a counter (e.g., count = count())
+when f_globals[var].exists(), and f_globals[var[old_n]] != f_globals[var], cache.update(f"var{n}",f_globals[var])
+then u have a d = {
+	'monkey1': asdjewf,
+	'monkey2': 123413r43,
+}

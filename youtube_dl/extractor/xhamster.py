@@ -203,7 +203,7 @@ class XHamsterIE(InfoExtractor):
             [r'<h1[^>]*>([^<]+)</h1>',
              r'<meta[^>]+itemprop=".*?caption.*?"[^>]+content="(.+?)"',
              r'<title[^>]*>(.+?)(?:,\s*[^,]*?\s*Porn\s*[^,]*?:\s*xHamster[^<]*| - xHamster\.com)</title>'],
-            webpage, 'title')
+            webpage, '<title>')
 
         formats = []
         format_urls = set()

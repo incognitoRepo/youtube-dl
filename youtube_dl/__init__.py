@@ -45,26 +45,22 @@ from .extractor.adobepass import MSO_INFO
 from .YoutubeDL import YoutubeDL
 
 
+from hdlogger.utils import *
+
 def _real_main(argv=None):
     # Compatibility fixes for Windows
     if sys.platform == 'win32':
         # https://github.com/ytdl-org/youtube-dl/issues/820
         codecs.register(lambda name: codecs.lookup('utf-8') if name == 'cp65001' else None)
-
     workaround_optparse_bug9161()
-
     setproctitle('youtube-dl')
-
     parser, opts, args = parseOpts(argv)
-
     # Set user agent
     if opts.user_agent is not None:
         std_headers['User-Agent'] = opts.user_agent
-
     # Set referer
     if opts.referer is not None:
         std_headers['Referer'] = opts.referer
-
     # Custom HTTP headers
     if opts.headers is not None:
         for h in opts.headers:
@@ -472,11 +468,14 @@ def _real_main(argv=None):
 def main(argv=None):
     try:
         _real_main(argv)
-    except DownloadError:
+    except DownloadError as e:
+        wf(stackprinter.format(e),'logs/main.log','a')
         sys.exit(1)
-    except SameFileError:
+    except SameFileError as e:
+        wf(stackprinter.format(e),'logs/main.log','a')
         sys.exit('ERROR: fixed output name but more than one file to download')
-    except KeyboardInterrupt:
+    except KeyboardInterrupt as e:
+        wf(stackprinter.format(e),'logs/main.log','a')
         sys.exit('\nERROR: Interrupted by user')
 
 

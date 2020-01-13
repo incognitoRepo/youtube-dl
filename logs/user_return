@@ -1,0 +1,21 @@
+File /Users/alberthan/VSCodeProjects/vytd/lib/python3.8/site-packages/hdlogger/serializers/tracers/DEhd.py, line 276, in user_return
+    273  def user_return(self, frame, return_value):
+    274    logging.debug('user_return')
+    275    try:
+--> 276      pkl = pickle.dumps(self.pickleable_state.pkl_format_return)
+    277      hexa = pkl.hex()
+    ..................................................
+     self = <hdlogger.serializers.tracers.DEhd.HiDefTracer object at 0x1
+             0c938430>
+     frame = <frame at 0x7f8b42a1e990, file '/Users/alberthan/VSCodeProje
+              cts/vytd/src/youtube-dl/youtube_dl/compat.py', line 2837, co
+              de workaround_optparse_bug9161>
+     return_value = None
+     logging.debug = <function 'debug' __init__.py:2069>
+     pickle.dumps = <function 'dumps' _dill.py:341>
+     self.pickleable_state.pkl_format_return = # AttributeError
+          self.pickleable_state = <hdlogger.serializers.classes.Pickle
+           ableState object at 0x1128d2160>
+    ..................................................
+
+AttributeError: 'PickleableState' object has no attribute 'pkl_format_return'

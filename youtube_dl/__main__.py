@@ -13,88 +13,169 @@ if __package__ is None and not hasattr(sys, 'frozen'):
   path = os.path.realpath(os.path.abspath(__file__))
   sys.path.insert(0, os.path.dirname(os.path.dirname(path)))
 
-import youtube_dl
-import hunter, inspect
-from youtube_dl.hunterconfig import QueryConfig
+import youtube_dl, inspect, traceback
 from prettyprinter import cpprint, pformat
-from hunter.tracer import Tracer
 from pathlib import Path
 from ipdb import set_trace as st
-import os, io, stackprinter
-import pickle, sys
+import os, io, stackprinter, pickle, hunter
 from optparse import OptionParser
 from types import GeneratorType
+from typing import Any, Dict
 from ansi2html import Ansi2HTMLConverter
 from contextlib import contextmanager
 from toolz.curried import compose_left
-from hdlogger.tracers import hdTracer
+from hdlogger.utils import *
+from hdlogger.serializers.tracers import hdTracer
 from hdlogger.processors import TraceProcessor
+from hdlogger.serializers.classes import PickleableFrame
 
 test = True
 output = True
 dcts = []
-
-def wf(filename,obj,mode="a"):
-  path = Path(filename)
-  if not path.parent.exists():
-    path.mkdir(parents=True, exist_ok=True)
-  if not isinstance(obj, str): obj = str(obj)
-  if mode == "a" and not obj.endswith("\n"): obj = f"{obj}\n"
-  with path.open(mode,encoding="utf-8") as f:
-    f.write(obj)
+vars_to_watch = ['count']
 
 @contextmanager
 def captured_output():
   new_out, new_err = io.StringIO(), io.StringIO()
   old_out, old_err = sys.stdout, sys.stderr
   try:
-    sys.stdout, sys.stderr = new_out, new_err
+    # sys.stdout, sys.stderr = new_out, new_err
+    sys.stdout, sys.stderr = old_out, old_err
     yield sys.stdout, sys.stderr
-  except SystemExit as err:
-    print('-- expected SystemExit: \x1b[1;32mSuccess\x1b[0m')
   except:
-    sys.stdout, sys.stderr = old_out, old_err
-    s = stackprinter.format(sys.exc_info()); print(s)
-    # import IPython; IPython.embed()
-    import ipdb; ipdb.post_mortem(sys.exc_info()[2])
+    s = stackprinter.format(sys.exc_info())
+    wf(s, 'logs/captured_output.error.log', 'a')
     raise
-  else:
-    sys.stdout, sys.stderr = old_out, old_err
   finally:
     sys.stdout, sys.stderr = old_out, old_err
+
+def setup_debug():
+  import sys, os
+  sys.path.insert(0, '/Users/alberthan/VSCodeProjects/HDLogger')
+  hd_tracer = hdTracer()
+  sys.settrace(hd_tracer.trace_dispatch)
+  try:
+    youtube_dl.main()
+  # except SystemExit as err:
+    # wf(stackprinter.format(err), 'logs/system_exit.expected_error.log', 'a')
+    # print('--- expected SystemExit: \x1b[1;32mSuccess\x1b[0m')
+  except:
+    wf(stackprinter.format(sys.exc_info()), 'logs/error.except.main.log', 'a')
+    raise
+  finally:
+    # hd_tracer.varswatcher.write_var_history()
+    wf(output,'logs/setup_debug.finally0.log','a')
+  return (inspect.currentframe(), globals(), locals())
+def setup_debug2():
+  import sys, os
+  sys.path.insert(0, '/Users/alberthan/VSCodeProjects/HDLogger')
+  hd_tracer = hdTracer()
+  oldout,olderr = sys.stdout,sys.stderr
+  sys.stdout = newout = io.StringIO()
+  sys.stderr = newerr = io.StringIO()
+  sys.settrace(hd_tracer.trace_dispatch)
+  try:
+    youtube_dl.main()
+  except:
+    wf(stackprinter.format(sys.exc_info()), 'logs/error.except.main.log', 'a')
+    raise
+  finally:
+    output,error = newout.getvalue(),newerr.getvalue()
+    wf(output,'logs/stdout.finally2.log','a')
+    wf(error,'logs/stderr.finally2.log','a')
+  return (inspect.currentframe(), globals(), locals())
+
+def setup_debug3():
+  try:
+    youtube_dl.main()
+  except:
+    wf(stackprinter.format(sys.exc_info()), 'logs/error.except.main3.log', 'a')
+    raise
+
+def setup_hunter_code():
+  sys.path.insert(0, '/Users/alberthan/VSCodeProjects/HDLogger')
+  lines = io.StringIO()
+  try:
+    with hunter.trace(filename__contains="youtube",action=hunter.CodePrinter(stream=lines)):
+      youtube_dl.main()
+  except:
+    wf(stackprinter.format(sys.exc_info()), 'logs/error.except.main.log', 'a')
+    raise
+  finally:
+    output = lines.getvalue()
+    wf(output,'logs/hunteroutput.finally.log','a')
+  return (inspect.currentframe(), globals(), locals())
+
+def setup_hunter_call():
+  sys.path.insert(0, '/Users/alberthan/VSCodeProjects/HDLogger')
+  lines = io.StringIO()
+  try:
+    with hunter.trace(filename__contains="youtube",action=hunter.CallPrinter(stream=lines)):
+      youtube_dl.main()
+  except:
+    wf(stackprinter.format(sys.exc_info()), 'logs/error.except.main.log', 'a')
+    raise
+  finally:
+    output = lines.getvalue()
+    wf(output,'logs/huntercall.finally.log','a')
+  return (inspect.currentframe(), globals(), locals())
 
 def setup():
   import sys
   import os
   sys.path.insert(0, '/Users/alberthan/VSCodeProjects/HDLogger')
-  hd_tracer = hdTracer()
-
+  hd_tracer = hdTracer(vars_to_watch)
+  oldout,olderr = sys.stdout,sys.stderr
+  sys.stdout = newout = io.StringIO()
+  sys.stderr = newerr = io.StringIO()
+  sys.settrace(hd_tracer.trace_dispatch)
   try:
-    with captured_output() as (io_out,io_err):
-      sys.settrace(hd_tracer.trace_dispatch)
-      youtube_dl.main()
-  except SystemExit as err:
-    print('-- expected SystemExit: \x1b[1;32mSuccess\x1b[0m')
-    raise err
+    youtube_dl.main()
+  # except SystemExit as err:
+    # wf(stackprinter.format(err), 'logs/system_exit.expected_error.log', 'a')
+    # print('--- expected SystemExit: \x1b[1;32mSuccess\x1b[0m')
   except:
-    wf('logs/error.except.main.log', stackprinter.format(sys.exc_info()), 'a')
+    wf(stackprinter.format(sys.exc_info()), 'logs/error.except.main.log', 'a')
     raise
   finally:
-    output,error = io_out.getvalue(),io_err.getvalue()
+    # hd_tracer.varswatcher.write_var_history()
+    output,error = newout.getvalue(),newerr.getvalue()
     print(output)
-    wf('logs/io_out.finally.log', output, 'a')
-    wf('logs/io_err.finally.log', error, 'a')
+    wf(output,'logs/stdout.finally.log','a')
+    wf(error,'logs/stderr.finally.log','a')
   return (inspect.currentframe(), globals(), locals())
 
-def go_interactive(pas):
-  frame, glols, lols = pas
+def process():
   filepath = '/Users/alberthan/VSCodeProjects/HDLogger/youtube-dl/logs/03.pickled_states_hex.tracer.log'
   tp = TraceProcessor(filepath)
-  df = tp.dataframe
-  import IPython; IPython.embed()
+  df = tp.dataframe.drop('attrs',1)
+  tp.level1; tp.level_1
+  sts = tp.pickleable_states
+  maxstacklen = df['stacklen'].max() # 56
+  try:
+    df[df['stacklen'].apply(lambda cell: cell <= maxstacklen)]
+  except:
+    exc = sys.exc_info()
+    tb = traceback.format_exception(*sys.exc_info())
+    wf(tb,'logs/catchall.tb.log','w')
+    sp = stackprinter.format(sys.exc_info())
+    wf(sp,'logs/catchall.sp.log','w')
+
+  try:
+    df[df['stacklen'].apply(lambda cell: cell <= maxstacklen)]
+  except Exception as e:
+    exc = e
+    tb = traceback.format_exception(*e)
+    wf(tb,'logs/named.tb.log','w')
+    sp = stackprinter.format(e)
+    wf(sp,'logs/named.sp.log','w')
+
+  wf(tp.level1,'logs/process.level1.log','a')
+  wf(tp.level_1,'logs/process.level_1.log','a')
+
+  # import IPython; IPython.embed()
 
 if __name__ == '__main__':
-  compose_left(
-    setup,
-    go_interactive
-  )()
+  pas = setup_debug2()
+  # go_interactive(pas)
+  # process()
