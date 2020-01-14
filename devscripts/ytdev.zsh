@@ -15,7 +15,6 @@ print $(whence -p python3)
 
 py_path='/Users/alberthan/VSCodeProjects/vytd/bin/python3'
 ytdl_path='/Users/alberthan/VSCodeProjects/vytd/src/youtube-dl'
-video_url='https://www.pornhub.com/view_video.php?viewkey=ph5cc20b5ed3208'
 video_url='https://www.youtube.com/watch?v=vN9y4umE300'
 # CFG="reference"
 if [[ "$pwd" != $ytdl_path ]]; then
