@@ -1,12 +1,5 @@
 v_ytd_path='/Users/alberthan/VSCodeProjects/vytd/'
 
-# fd -d 1 'el[0-9]{3}' $v_ytd_path | xargs rm
-# fd -d 1 'hc[0-9]{3}' '/Users/alberthan/VSCodeProjects/vytd/' | xargs rm
-# fd -d 1 'ydl[0-9]{3}' '/Users/alberthan/VSCodeProjects/vytd/' | xargs rm
-# fd -d 1 . '/Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/eventpickle' | xargs rm
-rm -f '/Users/alberthan/VSCodeProjects/vytd/tb.log'
-rm -f '/Users/alberthan/VSCodeProjects/vytd/bfs.log'
-rm -f '/Users/alberthan/VSCodeProjects/vytd/auto_repr_err.log'
 # GOTCHA: can't put quotes around paths for zsh expansion
 rm -f /Users/alberthan/VSCodeProjects/vytd/src/youtube-dl/logs/*.log
 
