@@ -25,7 +25,7 @@ if [[ "$pwd" != $ytdl_path ]]; then
   # PYTHONHUNTER='~Q(module_in=["six","pkg_resources"]),Q(filename_contains="youtube"),stdlib=True' python3 -m youtube_dl $video_url &> hunter.long.log
   cd -
 else
-  # python3 -m youtube_dl $video_url
+  python3 -m youtube_dl $video_url
   # PYTHONHUNTER='~Q(kind="line"),~Q(module_in=["six","pkg_resources"]),Q(filename_contains="youtube"),stdlib=True' python3 -m youtube_dl $video_url &> hunter.log
   # PYTHONHUNTER='~Q(module_in=["six","pkg_resources"]),Q(filename_contains="youtube"),stdlib=True' python3 -m youtube_dl $video_url &> hunter.long.log
 fi
