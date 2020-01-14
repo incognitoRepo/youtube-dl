@@ -66,6 +66,7 @@ def setup_debug():
     # hd_tracer.varswatcher.write_var_history()
     wf(output,'logs/setup_debug.finally0.log','a')
   return (inspect.currentframe(), globals(), locals())
+
 def setup_debug2():
   import sys, os
   sys.path.insert(0, '/Users/alberthan/VSCodeProjects/HDLogger')
