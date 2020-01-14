@@ -18,7 +18,7 @@ ytdl_path='/Users/alberthan/VSCodeProjects/vytd/src/youtube-dl'
 video_url='https://www.youtube.com/watch?v=vN9y4umE300'
 # CFG="reference"
 if [[ "$pwd" != $ytdl_path ]]; then
-  cd $ytdl_path
+  cd $ytdl_path # TODO: do i really need to cd to $ytdl_path here?
   # python3 -m pdb -m youtube_dl $video_url
   python3 -m youtube_dl $video_url
   # PYTHONHUNTER='~Q(kind="line"),~Q(module_in=["six","pkg_resources"]),Q(filename_contains="youtube"),stdlib=True' python3 -m youtube_dl $video_url &> hunter.log
